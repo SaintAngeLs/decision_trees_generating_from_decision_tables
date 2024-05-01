@@ -1,0 +1,29 @@
+{ "employee": {
+  },  
+  "department": {
+  	"department": "One",
+	"employees": [
+			{ 
+			"name": "Robinson",
+			"maritalStatus": "Married",
+			"gender": "Female",
+			"age": 25,
+			"salary": 20000
+			},
+			{ 
+			"name": "Warner",
+			"maritalStatus": "Married",
+			"gender": "Male",
+			"age": 45,
+			"salary": 150000
+			},
+			{ 
+			"name": "Stevens",
+			"maritalStatus": "Single",
+			"gender": "Male",
+			"age": 24,
+			"salary": 35000
+			}
+	]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "medicalService" : {
+    "placeOfService" : "Inpatient",
+    "type" : "nonRoutineGynExam",
+    "plan" : "PL555",
+    "groupSize" : "L",
+    "inNetwork" : "Y",
+    "isCovered" : "Y",
+    "dateOfService" : "2020-03-21T04:00:00.000+00:00"
+  }
+}
