@@ -1,0 +1,33 @@
+{
+  "application" : {
+    "id" : "3",
+    "applicationRiskScore" : 0,
+    "riskCategory" : "?",
+    "pmt" : 0.0,
+    "requiredMonthlyInstallment" : 0.0,
+    "disposableIncome" : 0.0,
+    "creditContingencyFactor" : 0.0,
+    "affordability" : false,
+    "eligibility" : "?",
+    "bureauCallType" : "?",
+    "bureauStrategy" : "?",
+    "routing" : "?",
+    "loanOriginationResult" : "?"
+  },
+  "applicant" : {
+    "fullName" : "Mary K. Brown",
+    "age" : 24,
+    "maritalStatus" : "M",
+    "employmentStatus" : "STUDENT",
+    "monthlyIncome" : 7300.0,
+    "monthlyRepayments" : 2000.0,
+    "monthlyExpenses" : 1400.0,
+    "existingCustomer" : true
+  },
+  "requestedProduct" : {
+    "productType" : "SPECIAL LOAN",
+    "amount" : 150000,
+    "rate" : 0.3199999928474426,
+    "term" : 148
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "applicant" : {
+    "name" : "Peter N. Johnson",
+    "existingCustomerSoleAnnualIncomeAmount" : 0,
+    "existingCustomerOutstandingMortgageBorrowingsAmount" : 52000,
+    "existingCustomerSavingAndInvestmentsBalanceAmount" : 340000,
+    "existingCustomerCurrentAccountType" : "Standard",
+    "yearsOfAge" : 45,
+    "existingCustomer" : true,
+    "soleAnnualIncomeAmount" : 120000,
+    "residentialStatus" : "UK Resident",
+    "applicationCreditCardPreviouslyAppliedInLast6Months" : false,
+    "numberOfYearsAddressHistory" : 3,
+    "numberOfDefaultPaymentsInLast12Months" : 0,
+    "declaredBankrupcy" : false,
+    "yearsWithCurrentAccountBank" : 3,
+    "amountOfAvailableCreditUsedPercentage" : 20,
+    "creditScore" : 0
+  },
+  "application" : {
+    "cardType" : "Private"
+  }
+}

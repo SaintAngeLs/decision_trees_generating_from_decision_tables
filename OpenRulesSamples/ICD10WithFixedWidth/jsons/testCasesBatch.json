@@ -1,0 +1,26 @@
+[ {
+  "claim" : {
+    "id" : "A",
+    "diagnoses" : [ "D47.02", "C94.32" ]
+  }
+}, {
+  "claim" : {
+    "id" : "B",
+    "diagnoses" : [ "E71.313", "E72.3" ]
+  }
+}, {
+  "claim" : {
+    "id" : "C",
+    "diagnoses" : [ "R29.891", "M43.6", "F45.8" ]
+  }
+}, {
+  "claim" : {
+    "id" : "D",
+    "diagnoses" : [ "D75.81", "C94.42" ]
+  }
+}, {
+  "claim" : {
+    "id" : "D",
+    "diagnoses" : [ "D75.81", "C94.32" ]
+  }
+} ]

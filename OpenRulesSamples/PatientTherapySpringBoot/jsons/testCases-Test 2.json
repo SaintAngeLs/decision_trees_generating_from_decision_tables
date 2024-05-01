@@ -1,0 +1,11 @@
+{
+  "doctorVisit" : {
+    "encounterDiagnosis" : "Acute Sinusitis"
+  },
+  "patient" : {
+    "age" : 65,
+    "weight" : 83.0,
+    "creatinineLevel" : 1.8,
+    "creatinineClearance" : 0.0
+  }
+}
