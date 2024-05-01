@@ -27,7 +27,7 @@ jobs:
 
       - name: Run tests
         run: |
-          cd python/tests
+          cd python
           pytest
 
       - name: Upload decision tree visualization to artifacts
