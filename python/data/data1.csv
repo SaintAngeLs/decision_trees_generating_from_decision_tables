@@ -1,0 +1,8 @@
+age,income,student,buys_computer
+youth,high,no,no
+youth,high,no,yes
+middle_aged,medium,no,yes
+senior,medium,yes,yes
+senior,low,no,no
+middle_aged,low,no,yes
+youth,medium,yes,yes
