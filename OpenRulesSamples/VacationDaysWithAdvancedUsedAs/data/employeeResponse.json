@@ -1,0 +1,9 @@
+{
+  "id" : "Robinson",
+  "vacationDays" : 30,
+  "eligibleForExtra5Days" : true,
+  "eligibleForExtra3Days" : true,
+  "eligibleForExtra2Days" : true,
+  "age" : 57,
+  "service" : 30
+}

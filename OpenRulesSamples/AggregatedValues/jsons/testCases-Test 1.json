@@ -1,0 +1,61 @@
+{
+  "department" : {
+    "departmentName" : "Department-1",
+    "employees" : [ {
+      "name" : "Robinson",
+      "age" : 25,
+      "gender" : "Female",
+      "maritalStatus" : "Married",
+      "salary" : 20000,
+      "state" : "NJ",
+      "wealthCategory" : "?"
+    }, {
+      "name" : "Warner",
+      "age" : 45,
+      "gender" : "Male",
+      "maritalStatus" : "Married",
+      "salary" : 150000,
+      "state" : "CA",
+      "wealthCategory" : "?"
+    }, {
+      "name" : "Stevens",
+      "age" : 24,
+      "gender" : "Male",
+      "maritalStatus" : "Single",
+      "salary" : 35000,
+      "state" : "NY",
+      "wealthCategory" : "?"
+    }, {
+      "name" : "White",
+      "age" : 32,
+      "gender" : "Female",
+      "maritalStatus" : "Married",
+      "salary" : 75000,
+      "state" : "CA",
+      "wealthCategory" : "?"
+    }, {
+      "name" : "Smith",
+      "age" : 46,
+      "gender" : "Male",
+      "maritalStatus" : "Single",
+      "salary" : 110000,
+      "state" : "VA",
+      "wealthCategory" : "?"
+    }, {
+      "name" : "Green",
+      "age" : 28,
+      "gender" : "Female",
+      "maritalStatus" : "Married",
+      "salary" : 40000,
+      "state" : "WA",
+      "wealthCategory" : "?"
+    } ],
+    "minSalary" : 0,
+    "maxSalary" : 0,
+    "totalSalary" : 0.0,
+    "averageSalary" : 0.0,
+    "numberOfEmployees" : 0,
+    "employeesInCA" : 0,
+    "numberOfHighPaidEmployees" : 0
+  }
+}

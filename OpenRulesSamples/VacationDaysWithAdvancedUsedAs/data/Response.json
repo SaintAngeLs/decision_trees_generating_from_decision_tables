@@ -1,0 +1,49 @@
+[ {
+  "id" : "A",
+  "vacationDays" : 27,
+  "eligibleForExtra5Days" : true,
+  "eligibleForExtra3Days" : false,
+  "eligibleForExtra2Days" : false,
+  "age" : 17,
+  "service" : 1
+}, {
+  "id" : "B",
+  "vacationDays" : 22,
+  "eligibleForExtra5Days" : false,
+  "eligibleForExtra3Days" : false,
+  "eligibleForExtra2Days" : false,
+  "age" : 25,
+  "service" : 5
+}, {
+  "id" : "C",
+  "vacationDays" : 30,
+  "eligibleForExtra5Days" : true,
+  "eligibleForExtra3Days" : true,
+  "eligibleForExtra2Days" : true,
+  "age" : 49,
+  "service" : 30
+}, {
+  "id" : "D",
+  "vacationDays" : 24,
+  "eligibleForExtra5Days" : false,
+  "eligibleForExtra3Days" : false,
+  "eligibleForExtra2Days" : true,
+  "age" : 49,
+  "service" : 29
+}, {
+  "id" : "E",
+  "vacationDays" : 30,
+  "eligibleForExtra5Days" : true,
+  "eligibleForExtra3Days" : true,
+  "eligibleForExtra2Days" : true,
+  "age" : 57,
+  "service" : 32
+}, {
+  "id" : "F",
+  "vacationDays" : 30,
+  "eligibleForExtra5Days" : true,
+  "eligibleForExtra3Days" : true,
+  "eligibleForExtra2Days" : true,
+  "age" : 64,
+  "service" : 42
+} ]

@@ -1,0 +1,54 @@
+{
+  "securityList" : {
+    "id" : "List 4",
+    "securities" : [ {
+      "id" : "Joe & Dawn Johnson",
+      "type" : "Peter's guarantee",
+      "securedBy" : "Johnson's House",
+      "equity" : 300000.0,
+      "debt" : 150000.0
+    }, {
+      "id" : "Joe Johnson & Bill Smith",
+      "type" : "Business Loan",
+      "securedBy" : "Johnson's House",
+      "equity" : 26000.0,
+      "debt" : 200000.0
+    }, {
+      "id" : "Bill & Susan Smith",
+      "type" : "Housing Loan",
+      "securedBy" : "Smith's House",
+      "equity" : 240000.0,
+      "debt" : 150000.0
+    }, {
+      "id" : "Tommy Smith",
+      "type" : "Educational Loan",
+      "securedBy" : "Smith's House",
+      "equity" : 0.0,
+      "debt" : 50000.0
+    } ],
+    "totalDebt" : 0.0,
+    "totalEquity" : 0.0
+  },
+  "stateMachine" : {
+    "loanState" : "New",
+    "incomingEvent" : "New Loan Request",
+    "outgoingEvent" : "?",
+    "waitingPeriod" : 0
+  },
+  "loanApplication" : {
+    "purpose" : "Education",
+    "loanAmount" : 50000.0,
+    "loanTerm" : 36,
+    "borrowerTotalEquity" : 0.0,
+    "borrowerTotalDebt" : 0.0,
+    "globalEquity" : 0.0,
+    "globalDebt" : 0.0,
+    "evaluationResult" : 0.0
+  },
+  "borrower" : {
+    "fullName" : "Peter Johnson",
+    "SSN" : "157-82-5344",
+    "monthlyIncome" : 4000.0,
+    "monthlyDebt" : 2500.0
+  }
+}

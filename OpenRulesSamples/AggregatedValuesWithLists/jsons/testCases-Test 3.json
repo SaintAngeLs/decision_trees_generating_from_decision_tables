@@ -1,0 +1,59 @@
+{
+  "department" : {
+    "departmentName" : "Department 2",
+    "employees" : [ {
+      "name" : "Brown",
+      "age" : 32,
+      "gender" : "Male",
+      "maritalStatus" : "Married",
+      "salary" : 65000,
+      "wealthCategory" : "?"
+    }, {
+      "name" : "Klaus",
+      "age" : 54,
+      "gender" : "Male",
+      "maritalStatus" : "Married",
+      "salary" : 85000,
+      "wealthCategory" : "?"
+    }, {
+      "name" : "Houston",
+      "age" : 47,
+      "gender" : "Female",
+      "maritalStatus" : "Single",
+      "salary" : 35000,
+      "wealthCategory" : "?"
+    }, {
+      "name" : "Long",
+      "age" : 29,
+      "gender" : "Male",
+      "maritalStatus" : "Married",
+      "salary" : 40000,
+      "wealthCategory" : "?"
+    }, {
+      "name" : "Short",
+      "age" : 22,
+      "gender" : "Male",
+      "maritalStatus" : "Single",
+      "salary" : 20000,
+      "wealthCategory" : "?"
+    }, {
+      "name" : "Doe",
+      "age" : 21,
+      "gender" : "Female",
+      "maritalStatus" : "Single",
+      "salary" : 21000,
+      "wealthCategory" : "?"
+    } ],
+    "RICHEmployees" : [ ],
+    "names" : [ ],
+    "salaries" : [ ],
+    "minSalary" : 0,
+    "maxSalary" : 0,
+    "totalSalary" : 0.0,
+    "numberOfEmployees" : 0,
+    "averageSalary" : 0.0,
+    "numberOfHighPaidEmployees" : 0,
+    "women" : [ ],
+    "men" : [ ]
+  }
+}
