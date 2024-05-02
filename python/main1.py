@@ -46,22 +46,18 @@ def main():
     attributes = ['age', 'income', 'student']  
     target_attribute = 'buys_computer'
     
-    # Build the decision tree
     tree = build_decision_tree(data_records, attributes, target_attribute)
     
-    # Visualize and print the decision tree
     print("\nDecision Tree Structure:")
     print_tree(tree)
     
-    # Use graphviz to visualize the tree
     from graphviz import Digraph
     graph = Digraph()
     visualize_tree(tree, graph)
-    # Specify the file name with path where the image will be saved
-    graph.render('output/decision_tree', format='png', cleanup=True)
+
+    graph.render('output/decision_tree_1', format='png', cleanup=True)
     print("Decision tree visualization saved as 'output/decision_tree.png'.")
 
-    # Example classification
     sample = {'age': 'youth', 'income': 'high', 'student': 'no'}
     decision = classify(tree, sample)
     print(f"\nDecision for the sample {sample} is: {decision}")
