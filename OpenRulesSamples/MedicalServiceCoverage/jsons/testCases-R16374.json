@@ -1,0 +1,10 @@
+{
+  "medicalService" : {
+    "placeOfService" : "Inpatient",
+    "type" : "transgenderSurgery",
+    "plan" : "PL012",
+    "inNetwork" : "N",
+    "isCovered" : "N",
+    "dateOfService" : "2018-11-03T04:00:00.000+00:00"
+  }
+}

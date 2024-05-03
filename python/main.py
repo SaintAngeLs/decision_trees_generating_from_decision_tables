@@ -39,12 +39,11 @@ def main():
     data = pd.read_csv(args.data_file)
     print("Dataset:")
     print(data)
-
-    # Convert DataFrame to list of dictionaries
+    
     data_records = data.to_dict('records')
     
-    # Define which columns are features and which one is the target
-    attributes = ['age', 'income', 'student']  # Adjust the example attributes
+
+    attributes = ['age', 'income', 'student']  
     target_attribute = 'buys_computer'
     
     # Build the decision tree

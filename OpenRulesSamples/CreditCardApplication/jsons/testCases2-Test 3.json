@@ -1,0 +1,23 @@
+{
+  "applicant" : {
+    "name" : "Robert Cooper Jr.",
+    "existingCustomerSoleAnnualIncomeAmount" : 0,
+    "existingCustomerOutstandingMortgageBorrowingsAmount" : 0,
+    "existingCustomerSavingAndInvestmentsBalanceAmount" : 35000,
+    "existingCustomerCurrentAccountType" : "Private",
+    "yearsOfAge" : 38,
+    "existingCustomer" : false,
+    "soleAnnualIncomeAmount" : 80000,
+    "residentialStatus" : "UK Resident",
+    "applicationCreditCardPreviouslyAppliedInLast6Months" : true,
+    "numberOfYearsAddressHistory" : 1,
+    "numberOfDefaultPaymentsInLast12Months" : 0,
+    "declaredBankrupcy" : true,
+    "yearsWithCurrentAccountBank" : 1,
+    "amountOfAvailableCreditUsedPercentage" : 55,
+    "creditScore" : 0
+  },
+  "application" : {
+    "cardType" : "Balance Transfer"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "order" : {
+    "orderId" : "AAA",
+    "orderItems" : [ {
+      "id" : "AAA-1108",
+      "itemId" : "1108",
+      "qty" : 5
+    }, {
+      "id" : "AAA-1112",
+      "itemId" : "1112",
+      "qty" : 3
+    }, {
+      "id" : "AAA-2639",
+      "itemId" : "2639",
+      "qty" : 6
+    }, {
+      "id" : "AAA-2456",
+      "itemId" : "2456",
+      "qty" : 7
+    } ]
+  },
+  "promotion" : {
+    "id" : "Promo1",
+    "promotionItems" : [ {
+      "id" : "Promo1-1108",
+      "itemId" : "1108",
+      "minQty" : 5,
+      "qtyMinimumSatisfied" : "NO"
+    }, {
+      "id" : "Promo1-2639",
+      "itemId" : "2639",
+      "minQty" : 4,
+      "qtyMinimumSatisfied" : "NO"
+    } ],
+    "amount" : 3.5
+  }
+}

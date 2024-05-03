@@ -1,0 +1,35 @@
+<strong>Build and Run Decision Models</strong> </p>
+
+The workspace “OpenRulesDecisionManager” contains several examples of OpenRules 
+projects (decision models) that can be used as prototypes for your own projects:
+<ul <ul>
+	<li>
+		<strong>VacationsDays</strong><span>&nbsp;</span>– this is an example of a basic 
+		OpenRules project</li>
+		<li>
+		<strong>VacationsDaysLambda</strong><span>&nbsp;</span>– this project demonstrates 
+		how to deploy the project VacationDays as<span>&nbsp;</span><a href="https://openrulesdecisionmanager.com/deploying-decision-services/aws-lambda/" >AWS 
+		Lambda function</a></li>
+		<li>
+		<strong>VacationsDaysSpingBoot</strong><span>&nbsp;</span>– this project demonstrates 
+		how to deploy the project VacationDays as<span>&nbsp;</span><a href="https://openrulesdecisionmanager.com/deploying-decision-services/restful-web-services/">RESTfull 
+		Web Service</a><span>&nbsp;</span>and how to create a Docker image.</li>
+	</ul>
+	</li>
+</ul>
+<p>
+You can build and test a decision model by a simple double-click on the file “<strong>test.bat</strong>“.&nbsp; 
+For Mac or Linux, use the script-file “<strong>test</strong>“. 
+When you try it for the first time, you may need to confirm that it’s safe to 
+execute this script. If you make any changes in your Excel tables or 
+configuration files, it will automatically re-build the model before running its 
+tests. If it finds any errors, it will display them using the business terms 
+pointing to the corresponding places in your Excel files. </p>
+<p>After the successful 
+build, “<strong>test.bat</strong>” 
+will test your model against test-cases described in the file “Test.xls”.&nbsp; 
+When you execute the decision model, the Decision Manager produces a 
+user-friendly execution protocol and explanation reports in the HTML format in 
+the generated folder “<strong>"report</strong>“.</p>
+<p>
+Read <a href="https://openrulesdecisionmanager.com/download/install-samples/">more  

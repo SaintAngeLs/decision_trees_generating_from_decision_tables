@@ -1,0 +1,27 @@
+{
+  "claim" : {
+    "id" : "6",
+    "procedures" : [ {
+      "id" : "389",
+      "code" : "85025",
+      "type" : "X"
+    } ],
+    "diagnoses" : [ {
+      "id" : "33",
+      "code" : "E28.319",
+      "type" : "Principal"
+    }, {
+      "id" : "34",
+      "code" : "H35.3114",
+      "type" : "Secondary"
+    }, {
+      "id" : "35",
+      "code" : "M80.039P",
+      "type" : "Secondary"
+    }, {
+      "id" : "36",
+      "code" : "T74.21XD",
+      "type" : "Secondary"
+    } ]
+  }
+}

@@ -1,0 +1,98 @@
+[ {
+  "medicalService" : {
+    "placeOfService" : "Inpatient",
+    "type" : "adultImmunizations",
+    "plan" : "PL123",
+    "groupSize" : "L",
+    "inNetwork" : "Y",
+    "isCovered" : "Y",
+    "dateOfService" : "2018-04-12T04:00:00.000+00:00"
+  }
+}, {
+  "medicalService" : {
+    "placeOfService" : "Office",
+    "type" : "allergyTesting",
+    "plan" : "PL123",
+    "groupSize" : "L",
+    "inNetwork" : "N",
+    "isCovered" : "Y",
+    "dateOfService" : "2019-01-10T05:00:00.000+00:00"
+  }
+}, {
+  "medicalService" : {
+    "placeOfService" : "Inpatient",
+    "type" : "nonRoutineGynExam",
+    "plan" : "PL555",
+    "groupSize" : "L",
+    "inNetwork" : "Y",
+    "isCovered" : "Y",
+    "dateOfService" : "2020-03-21T04:00:00.000+00:00"
+  }
+}, {
+  "medicalService" : {
+    "placeOfService" : "Office",
+    "type" : "prostateCaScreening",
+    "plan" : "PL622",
+    "groupSize" : "L",
+    "inNetwork" : "Y",
+    "isCovered" : "Y",
+    "dateOfService" : "2018-07-13T04:00:00.000+00:00"
+  }
+}, {
+  "medicalService" : {
+    "placeOfService" : "Inpatient",
+    "type" : "preferredLab",
+    "plan" : "PL898",
+    "groupSize" : "L",
+    "inNetwork" : "Y",
+    "isCovered" : "Y",
+    "dateOfService" : "2019-08-10T04:00:00.000+00:00"
+  }
+}, {
+  "medicalService" : {
+    "placeOfService" : "Inpatient",
+    "type" : "transgenderSurgery",
+    "plan" : "PL012",
+    "inNetwork" : "N",
+    "isCovered" : "N",
+    "dateOfService" : "2018-11-03T04:00:00.000+00:00"
+  }
+}, {
+  "medicalService" : {
+    "placeOfService" : "Office",
+    "type" : "organDonation",
+    "plan" : "PL012",
+    "inNetwork" : "N",
+    "isCovered" : "Y",
+    "dateOfService" : "2019-10-01T04:00:00.000+00:00"
+  }
+}, {
+  "medicalService" : {
+    "placeOfService" : "Office",
+    "type" : "catScans",
+    "plan" : "PL711",
+    "inNetwork" : "Y",
+    "isCovered" : "Y",
+    "dateOfService" : "2019-10-01T04:00:00.000+00:00"
+  }
+}, {
+  "medicalService" : {
+    "placeOfService" : "Office",
+    "type" : "diabeticTesting",
+    "plan" : "PL898",
+    "groupSize" : "L",
+    "inNetwork" : "N",
+    "isCovered" : "Y",
+    "dateOfService" : "2019-10-01T04:00:00.000+00:00"
+  }
+}, {
+  "medicalService" : {
+    "placeOfService" : "Outpatient",
+    "type" : "clinicServices",
+    "plan" : "PL788",
+    "groupSize" : "L",
+    "inNetwork" : "Y",
+    "isCovered" : "Y",
+    "dateOfService" : "2019-10-01T04:00:00.000+00:00"
+  }
+} ]

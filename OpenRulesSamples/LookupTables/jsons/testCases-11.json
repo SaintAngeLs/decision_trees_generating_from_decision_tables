@@ -1,0 +1,19 @@
+{
+  "claim" : {
+    "id" : "11",
+    "procedures" : [ {
+      "id" : "391",
+      "code" : "45340",
+      "type" : "X"
+    } ],
+    "diagnoses" : [ {
+      "id" : "272",
+      "code" : "Y36.510",
+      "type" : "Principal"
+    }, {
+      "id" : "273",
+      "code" : "F45.20",
+      "type" : "Secondary"
+    } ]
+  }
+}
