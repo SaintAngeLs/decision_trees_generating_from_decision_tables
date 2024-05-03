@@ -1,0 +1,61 @@
+{
+  "department" : {
+    "departmentName" : "Department-2",
+    "employees" : [ {
+      "name" : "Brown",
+      "age" : 32,
+      "gender" : "Male",
+      "maritalStatus" : "Married",
+      "salary" : 65000,
+      "state" : "CA",
+      "wealthCategory" : "?"
+    }, {
+      "name" : "Klaus",
+      "age" : 54,
+      "gender" : "Male",
+      "maritalStatus" : "Married",
+      "salary" : 85000,
+      "state" : "CA",
+      "wealthCategory" : "?"
+    }, {
+      "name" : "Houston",
+      "age" : 47,
+      "gender" : "Female",
+      "maritalStatus" : "Single",
+      "salary" : 35000,
+      "state" : "NY",
+      "wealthCategory" : "?"
+    }, {
+      "name" : "Long",
+      "age" : 29,
+      "gender" : "Male",
+      "maritalStatus" : "Married",
+      "salary" : 40000,
+      "state" : "NY",
+      "wealthCategory" : "?"
+    }, {
+      "name" : "Short",
+      "age" : 22,
+      "gender" : "Male",
+      "maritalStatus" : "Single",
+      "salary" : 20000,
+      "state" : "CA",
+      "wealthCategory" : "?"
+    }, {
+      "name" : "Doe",
+      "age" : 21,
+      "gender" : "Female",
+      "maritalStatus" : "Single",
+      "salary" : 21000,
+      "state" : "MA",
+      "wealthCategory" : "?"
+    } ],
+    "minSalary" : 0,
+    "maxSalary" : 0,
+    "totalSalary" : 0.0,
+    "averageSalary" : 0.0,
+    "numberOfEmployees" : 0,
+    "employeesInCA" : 0,
+    "numberOfHighPaidEmployees" : 0
+  }
+}

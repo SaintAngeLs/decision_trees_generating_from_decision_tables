@@ -1,0 +1,95 @@
+{
+  "claim" : {
+    "id" : "40",
+    "procedures" : [ {
+      "id" : "139",
+      "code" : "12001",
+      "type" : "X"
+    }, {
+      "id" : "140",
+      "code" : "28003",
+      "type" : "X"
+    }, {
+      "id" : "141",
+      "code" : "69990",
+      "type" : "X"
+    }, {
+      "id" : "142",
+      "code" : "28005",
+      "type" : "X"
+    }, {
+      "id" : "143",
+      "code" : "11000",
+      "type" : "X"
+    }, {
+      "id" : "144",
+      "code" : "28415",
+      "type" : "X"
+    }, {
+      "id" : "145",
+      "code" : "27675",
+      "type" : "Y"
+    }, {
+      "id" : "163",
+      "code" : "11011",
+      "type" : "X"
+    }, {
+      "id" : "164",
+      "code" : "30420",
+      "type" : "X"
+    }, {
+      "id" : "188",
+      "code" : "49657",
+      "type" : "X"
+    }, {
+      "id" : "189",
+      "code" : "62319",
+      "type" : "X"
+    }, {
+      "id" : "190",
+      "code" : "49180",
+      "type" : "X"
+    } ],
+    "diagnoses" : [ {
+      "id" : "19",
+      "code" : "I10",
+      "type" : "Principal"
+    }, {
+      "id" : "188",
+      "code" : "J38.6",
+      "type" : "Secondary"
+    }, {
+      "id" : "189",
+      "code" : "J38.3",
+      "type" : "Secondary"
+    }, {
+      "id" : "190",
+      "code" : "R49.21",
+      "type" : "Secondary"
+    }, {
+      "id" : "193",
+      "code" : "L76.01",
+      "type" : "Secondary"
+    }, {
+      "id" : "194",
+      "code" : "H52.01",
+      "type" : "Secondary"
+    }, {
+      "id" : "195",
+      "code" : "H47.632",
+      "type" : "Secondary"
+    }, {
+      "id" : "196",
+      "code" : "C49.A3",
+      "type" : "Secondary"
+    }, {
+      "id" : "197",
+      "code" : "N64.81",
+      "type" : "Secondary"
+    }, {
+      "id" : "198",
+      "code" : "A18.83",
+      "type" : "Secondary"
+    } ]
+  }
+}

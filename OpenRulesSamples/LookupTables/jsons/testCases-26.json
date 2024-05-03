@@ -1,0 +1,15 @@
+{
+  "claim" : {
+    "id" : "26",
+    "procedures" : [ {
+      "id" : "389",
+      "code" : "85025",
+      "type" : "X"
+    } ],
+    "diagnoses" : [ {
+      "id" : "58",
+      "code" : "Y08.09XS",
+      "type" : "Principal"
+    } ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "claim" : {
+    "id" : "17",
+    "procedures" : [ {
+      "id" : "138",
+      "code" : "28002",
+      "type" : "Z"
+    }, {
+      "id" : "139",
+      "code" : "12001",
+      "type" : "X"
+    } ],
+    "diagnoses" : [ {
+      "id" : "1",
+      "code" : "H10.411",
+      "type" : "Principal"
+    }, {
+      "id" : "2",
+      "code" : "F01.50",
+      "type" : "Principal"
+    } ]
+  }
+}
