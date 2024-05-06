@@ -5,15 +5,34 @@
 #include <stddef.h>
 
 typedef struct _TextTreeNode {
-    uint_least32_t* parent_text;
-    uint_least32_t* node_text;
+    char* parent_text;
+    char* node_text;
     
-    /* Visualization hints */
-    size_t left, right;
-
     struct _TextTreeNode* parent;
     struct _TextTreeNode* children;
+
     size_t nr_children;
+
+    /* Hints */
+
+    size_t lvl; /* 0 is root */
+    size_t width; /* max range */
+
+    size_t parent_index;
+    
+    struct _TextTreeNode* leaf_next;
+
+    size_t left, right;
+
+    /* Visualization hints */
+    float x;
+    float y;
+    float text_x;
+    float text_y;
+
+    float ptr_text_x;
+    float ptr_text_y;
+    float ptr_x, ptr_y, ptr_px, ptr_py;
 
 } TextTreeNode;
 

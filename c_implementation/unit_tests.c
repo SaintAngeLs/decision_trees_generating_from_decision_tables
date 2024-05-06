@@ -78,7 +78,16 @@ void printStringTree(StringTreeNode* st, int level) {
 }
 
 void xml_test() {
- 	StringTreeNode xml =  read_from_xml(xml_contents);
+	FILE* fp = fopen("data/example.xml", "r");
+	if (!fp) return;
+	char* str = get_file_contents(fp);
+	fclose(fp);
+	if (!str) {
+		return;
+	}
+	
+	StringTreeNode xml = read_from_xml(str);
+	free(str);
 	printStringTree(&xml, 0);
 	free_string_tree_children(xml);
 	return;

@@ -7,18 +7,21 @@
 #include <SFML/Graphics/Text.h>
 #include <SFML/Graphics/Types.h>
 #include <SFML/Graphics/Font.h>
+#include <SFML/Graphics/CircleShape.h>
 
 typedef struct _TextTreeVisualization {
     sfText** texts;
-    size_t nr_texts;
-    sfVertex* nodes;
-    size_t nr_node_triangles;
+    sfCircleShape** nodes;
     sfVertex* pointers;
-    size_t nr_pointer_triangles;
+
+    size_t nr_texts;
+    size_t nr_nodes;
+    size_t nr_pointers_lines;
 } TextTreeVisualization;
 
 void tree_visualization_draw(const TextTreeVisualization* tree, sfRenderWindow* window);
 
-TextTreeVisualization tree_visualization_create(const TextTreeNode* tree);
+/* TODO: unit test */
+TextTreeVisualization tree_visualization_create(TextTreeNode* tree, sfFont* font);
 
 #endif /* MINIML_TREE_VISUALIZATION_H */

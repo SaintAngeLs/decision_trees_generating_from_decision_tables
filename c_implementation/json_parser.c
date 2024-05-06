@@ -7,11 +7,7 @@
 #include <string.h>
 
 struct JsonReadStates {
-  enum JssState {
-    JSSDefault,
-    JSSReadingString,
-    JSSReadingQuoteless
-  } state;
+  enum JssState { JSSDefault, JSSReadingString, JSSReadingQuoteless } state;
 
   const char *input;
   const char *tmpNameRead;
@@ -74,13 +70,15 @@ StringTreeNode read_from_json(const char *json_contents) {
   }
   memset(jss.stack, 0, sizeof(*jss.stack));
 
-  /* parse */
-  while (*jss.input != 0) {
-    if (jss.state == JSSDefault) {
-      if (*jss.input == '\"') {
+  while (*jss.input) {
+    switch (jss.state) {
+    case JSSDefault: {
+      switch (*jss.input) {
+      case '\"':
         jss.state = JSSReadingString;
         jss.tmpNameRead = (jss.input + 1);
-      } else if (*jss.input == ':') {
+        break;
+      case ':':
         /*add the name*/
         if (!jss.str_input || jss.name) {
           free_all_json(&jss);
@@ -88,7 +86,9 @@ StringTreeNode read_from_json(const char *json_contents) {
         }
         jss.name = jss.str_input;
         jss.str_input = 0;
-      } else if (*jss.input == '{' || *jss.input == '[') {
+        break;
+      case '{':
+      case '[': {
         /*push*/
         StringNode *new_node = malloc(sizeof(StringNode));
         if (!new_node) {
@@ -98,16 +98,19 @@ StringTreeNode read_from_json(const char *json_contents) {
         memset(new_node, 0, sizeof(StringNode));
         new_node->prev = jss.stack;
         if (jss.name) {
-          new_node->data = jss.name;
+          new_node->name = jss.name;
           jss.name = NULL;
         }
         jss.stack = new_node;
         ++jss.stack_size;
-      } else if (*jss.input == '}' || *jss.input == ']') {
+        break;
+      }
+      case '}':
+      case ']': {
         /*pop*/
         if (jss.stack_size == 1) {
-            free_all_json(&jss);
-            return tree;
+          free_all_json(&jss);
+          return tree;
         }
 
         /*pop the str_input immediately*/
@@ -156,8 +159,8 @@ StringTreeNode read_from_json(const char *json_contents) {
           parent->childLast = newListNode;
           parent->nr_chilren++;
           newListNode->next = NULL;
-          newListNode->data.name = jss.stack->data;
-          jss.stack->data = NULL;
+          newListNode->data.name = jss.stack->name;
+          jss.stack->name = NULL;
 
           if (jss.stack->nr_chilren) {
             newListNode->data.children = chilrenArray;
@@ -175,16 +178,22 @@ StringTreeNode read_from_json(const char *json_contents) {
         free(jss.stack);
         jss.stack = parent;
         --jss.stack_size;
-
-      } else if (*jss.input == ',' || *jss.input == ' ' || *jss.input == '\t' ||
-                 *jss.input == '\n' || *jss.input == '\0') {
-        /*ignore*/
-      } else {
+      } break;
+      case ',':
+      case ' ':
+      case '\t':
+      case '\n':
+      case '\0':
+        break;
+      default:
         /*quoteless*/
         jss.state = JSSReadingQuoteless;
         jss.tmpNameRead = (jss.input + 0);
+        break;
       }
-    } else if (jss.state == JSSReadingString) {
+      break;
+    }
+    case JSSReadingString: {
       if (*jss.input == '\"') {
         size_t name_sz = jss.input - jss.tmpNameRead;
         if (jss.str_input) {
@@ -193,7 +202,7 @@ StringTreeNode read_from_json(const char *json_contents) {
             return tree;
           }
         }
-        jss.str_input = malloc(name_sz+1);
+        jss.str_input = malloc(name_sz + 1);
         if (!jss.str_input) {
           free_all_json(&jss);
           return tree;
@@ -202,7 +211,9 @@ StringTreeNode read_from_json(const char *json_contents) {
         jss.str_input[name_sz] = 0;
         jss.state = JSSDefault;
       }
-    } else if (jss.state == JSSReadingQuoteless) {
+      break;
+    }
+    case JSSReadingQuoteless: {
       if (*jss.input == ' ' || *jss.input == ',' || *jss.input == '\n' ||
           *jss.input == '\t' || *jss.input == '\0') {
         size_t name_sz = jss.input - jss.tmpNameRead;
@@ -212,7 +223,7 @@ StringTreeNode read_from_json(const char *json_contents) {
             return tree;
           }
         }
-        jss.str_input = malloc(name_sz+1);
+        jss.str_input = malloc(name_sz + 1);
         if (!jss.str_input) {
           free_all_json(&jss);
           return tree;
@@ -221,11 +232,16 @@ StringTreeNode read_from_json(const char *json_contents) {
         jss.str_input[name_sz] = 0;
         jss.state = JSSDefault;
       }
+      break;
+    }
+    default: {
+      break;
+    }
     }
     ++jss.input;
   }
 
-if (jss.stack_size != 1) {
+  if (jss.stack_size != 1) {
     free_all_json(&jss);
     return tree;
   }

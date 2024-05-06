@@ -1,5 +1,4 @@
 #include "tree_visualizer.h"
-#include "tree_visualization.h"
 #include <SFML/Config.h>
 #include <SFML/Graphics/RenderWindow.h>
 #include <SFML/Graphics/Types.h>
@@ -29,7 +28,7 @@ void destroy_handles(struct Handles g) {
     sfClock_destroy(g.zoom_cl);
 }
 
-void visualize_tree(TextTreeVisualization* tree, DecisionTableVisualization* table) {
+void visualize_tree(TextTreeVisualization* tree) {
     struct Handles handles;
     memset(&handles, 0, sizeof(handles));
     
@@ -51,8 +50,6 @@ void visualize_tree(TextTreeVisualization* tree, DecisionTableVisualization* tab
     int a_mov = 0;
     int s_mov = 0;
     int d_mov = 0;
-
-    int table_tree_mode = 0; 
 
     sfRenderWindow_setVerticalSyncEnabled(window, sfTrue);
 
@@ -97,9 +94,6 @@ void visualize_tree(TextTreeVisualization* tree, DecisionTableVisualization* tab
                     case sfKeyX:
                         zoom_incr = 1;
                     break;
-                    case sfKeyEnter:
-                        table_tree_mode = !table_tree_mode;
-                        break;
                     case sfKeyEscape:
                     sfRenderWindow_close(window);
                     break;
@@ -201,10 +195,7 @@ void visualize_tree(TextTreeVisualization* tree, DecisionTableVisualization* tab
         }
 
         sfRenderWindow_clear(window, (sfColor){255,255,255,255});
-        if (table_tree_mode)
-            tree_visualization_draw(tree, window);
-        else
-            table_visualization_draw(table, window); 
+        tree_visualization_draw(tree, window);
         sfRenderWindow_display(window);
     }
 

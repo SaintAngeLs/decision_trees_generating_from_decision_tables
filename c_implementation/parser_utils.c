@@ -45,15 +45,7 @@ void free_string_stack(StringNode *head, int keep_children) {
     StringNode *temp = head;
     head = head->prev;
     free_tree_list(temp->childFirst, keep_children);
-    free(temp->data);
-    free(temp);
-  }
-}
-
-void free_char_list(struct CharNode *head) {
-  while (head) {
-    struct CharNode *temp = head;
-    head = head->prev;
+    free(temp->name);
     free(temp);
   }
 }

@@ -4,28 +4,22 @@
 #include <stdio.h>
 
 /* used in stack for temporary children list */
-typedef struct _TreeListNode {
-  struct _TreeListNode *next;
+typedef struct TreeListNode_ {
   StringTreeNode data;
+  struct TreeListNode_ *next;  
 } TreeListNode;
 
 /* stack node */
-typedef struct _StringNode {
-  struct _StringNode *prev;
-  char *data; /* tag */
+typedef struct StringNode_ {
+  struct StringNode_ *prev;
+  char *name; /* tag name */
+
   TreeListNode *childFirst, *childLast;
   size_t nr_chilren;
 } StringNode;
 
-struct CharNode {
-  struct CharNode *next, *prev;
-  char data;
-};
-
 void free_tree_list(TreeListNode *head, int keep_children);
 void free_string_stack(StringNode *head, int keep_children);
-void free_char_list(struct CharNode *head);
-
 char* get_file_contents(FILE* fp);
 
 #endif /* MINIML_PARSER_UTILS_H */

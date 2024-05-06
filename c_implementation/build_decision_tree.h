@@ -1,11 +1,17 @@
 #ifndef MINIML_BUILD_DECISION_TREE_H
 #define MINIML_BUILD_DECISION_TREE_H
-#include "decision_table.h"
+#include "data_format_conversion.h"
 #include "text_tree.h"
 #include <stdint.h>
 
-/* non_comparible: Don't care if string or ignored (NULL for default) */
-/* select columns to ignore (NULL for default) */
-TextTreeNode* build_decision_tree(DecisionTable* table, int* non_comparable, int* ignore, size_t target);
+/** \brief Build a decision tree from a decision table.
+ *
+ * @param table A decision table
+ * @returns A decision tree created from the decision table
+ */
+TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
+                                  size_t nr_attr, size_t depth,
+                                  size_t target_attribute,
+                                  char* parent_text,TextTreeNode* parent);
 
 #endif /* MINIML_BUILD_DECISION_TREE_H */ 
