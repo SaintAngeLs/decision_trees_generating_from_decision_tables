@@ -5,13 +5,14 @@
 #include "heap_sort.h"
 #include "text_tree.h"
 #include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 static int data_queries_equal(DataQueryKey left, DataQueryKey right);
 
-static DataQueryKey convertToStr(DataQueryKey data);
-
+/* table 'view', no deep copying */
 static DecisionTable get_filtered_table(DecisionTable table, size_t best_attr, DataQueryKey value) {
     DecisionTable newTable;
     newTable.titles = table.titles;
@@ -30,7 +31,7 @@ static DecisionTable get_filtered_table(DecisionTable table, size_t best_attr, D
         return newTable;
     }
 
-    newTable.data = malloc(sizeof(DataQueryKey) * nrRows);
+    newTable.data = malloc(sizeof(DataQueryKey) * nrRows * table.nr_columns);
     if (!newTable.data) {
         newTable.titles = NULL;
         return newTable;
@@ -56,6 +57,20 @@ static void free_filtered_table(DecisionTable table) {
 }
 
 int compare_dqks_(DataQueryKey l, DataQueryKey r) {
+    union {
+        DataQueryKey in;
+        intmax_t out;
+    } conv;
+
+    intmax_t lc, rc;
+    conv.in = l;
+    lc = conv.out;
+
+    conv.in = r;
+    rc = conv.out;
+
+    return (lc < rc) ? -1 : (lc > rc ? 1 : 0);
+
     if (l.type == DQNone && r.type == DQNone) {
         return 0;
     }
@@ -100,22 +115,38 @@ int compare_dqks_(DataQueryKey l, DataQueryKey r) {
 }
 
 int compare_dqks_ptr_(const void* l, const void* r) {
+   assert(l&&r);
     return compare_dqks_(*(DataQueryKey*)l, *(DataQueryKey*)r);
 }
 
 int compare_dqks(const void* left, const void* right) {
     const DataQueryKeyAvlNode* l = left;
     const DataQueryKeyAvlNode* r = right;
-
+assert(l&&r);
     return compare_dqks_(l->value, r->value);
 }
 
 int compare_dqks2(const void* left, const void* right) {
     const DataQueryKeyAvlNode2* l = left;
     const DataQueryKeyAvlNode2* r = right;
-    
+    assert(l&&r);
     return compare_dqks_(l->value, r->value);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 static void calc_parents_1(DataQueryKeyAvlNode* root) {
     if (root->left) {
@@ -203,6 +234,20 @@ static DataQueryKeyAvlNode2* next_dfs2(DataQueryKeyAvlNode2* root) {
     return parent->right;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 static int information_gain(double* result, DecisionTable table, size_t attr, size_t target_attribute) {
     double attribute_entropy = 0;
 
@@ -243,20 +288,26 @@ static int information_gain(double* result, DecisionTable table, size_t attr, si
 
         DataQueryKeyAvlNode2* f = avl_find2(avl, value, compare_dqks2);
         if (!f) {
-            DataQueryKeyAvlNode2* newf = avl_insert2(avl, value, avl_values_storage2, 
+            avl = avl_insert2(avl, value, avl_val_storage_p2, 
             compare_dqks2);
+            DataQueryKeyAvlNode2* newf = avl_val_storage_p2;
+            assert(newf);
             ++avl_val_storage_p2;
             f = newf;
             f->nr = 0;
+            assert(avl);
         }
         
         DataQueryKeyAvlNode* f2 = avl_find(f->subavl, value_tgt, compare_dqks);
         if (!f2) {
-            DataQueryKeyAvlNode* newf2 = avl_insert(f->subavl, value_tgt,
-             avl_values_storage, compare_dqks);
+            DataQueryKeyAvlNode* newf2 = avl_val_storage_p;
+            f->subavl = avl_insert(f->subavl, value_tgt,
+             avl_val_storage_p, compare_dqks);
+             assert(newf2);
             ++avl_val_storage_p;
             f2 = newf2;
             f2->nr = 0;
+            assert(f->subavl);
         }
         
         ++f->nr;
@@ -284,11 +335,14 @@ static int information_gain(double* result, DecisionTable table, size_t attr, si
         DataQueryKey value_tgt = table.data[i*table.nr_columns + target_attribute];
         DataQueryKeyAvlNode* f2 = avl_find(avl_tgt, value_tgt, compare_dqks);
         if (!f2) {
-            DataQueryKeyAvlNode* newf2 = avl_insert(avl_tgt, value_tgt,
-             avl_target_values_storage, compare_dqks);
-            ++avl_target_values_storage;
+            DataQueryKeyAvlNode* newf2 = avl_tgt_val_storage_p;
+            avl_tgt = avl_insert(avl_tgt, value_tgt,
+             avl_tgt_val_storage_p, compare_dqks);
+             assert(newf2);
+            ++avl_tgt_val_storage_p;
             f2 = newf2;
             f2->nr = 0;
+            assert(avl_tgt);
         }
         ++f2->nr;
     }
@@ -354,8 +408,9 @@ TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
     if (same) {
         TextTreeNode node;
         DataQueryKey dominantClass = table.data[0*table.nr_columns + target_attribute];
-        DataQueryKey strCvt = convertToStr(dominantClass);
-        if (strCvt.type == DQNone) {
+        DataQueryKey strCvt;
+        int scss = convertToStr(&strCvt, dominantClass, 0);
+        if (!scss) {
             return none;
         }
 
@@ -393,15 +448,30 @@ TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
         while (all_count != table.nr_rows) {
             size_t count = 0;
             size_t idx = 0;
-            while (modeArr[idx]) ++idx;
+
+            
+
+            assert(all_count != table.nr_rows);
+            while (modeArr[idx]) {
+                ++idx;
+                assert(idx < table.nr_rows);
+            }
+            assert(idx*table.nr_columns+target_attribute < table.nr_columns * table.nr_rows);
             DataQueryKey nowKey = table.data[idx*table.nr_columns+target_attribute];
             ++count;
+            
+
             modeArr[idx] = 1;
+            ++all_count;
+
+            
+
             while (idx != table.nr_rows) {
                 if (!modeArr[idx] &&
                     data_queries_equal(nowKey, table.data[idx * table.nr_columns+target_attribute])) {
                     modeArr[idx] = 1;
                     ++count;
+                    ++all_count;
                 }
                 ++idx;
             }
@@ -414,8 +484,9 @@ TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
         free(modeArr);
 
         DataQueryKey dominantClass = maxNowKey;
-        DataQueryKey strCvt = convertToStr(dominantClass);
-        if (strCvt.type == DQNone) {
+        DataQueryKey strCvt;
+        int scss = convertToStr(&strCvt, dominantClass, 0);
+        if (!scss) {
             return none;
         }
 
@@ -432,6 +503,7 @@ TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
         node.parent = parent;
         node.children = NULL;
         node.nr_children = 0;
+        freeKey(&strCvt);
         return node;
     }
 
@@ -444,7 +516,7 @@ TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
 
     TextTreeNode newNode;
 
-    newNode.node_text = malloc(strlen(table.titles[best_attr]));
+    newNode.node_text = malloc(strlen(table.titles[best_attr]) + 1);
     if (!newNode.node_text) {
         return none;
     }
@@ -464,6 +536,8 @@ TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
 
     heapsort(bestAttrValues, sizeof(DataQueryKey), table.nr_rows, compare_dqks_ptr_);
 
+     
+
     DataQueryKey currentValue = bestAttrValues[0];
 
     TextTreeNode* newNodeChildren = malloc(sizeof(TextTreeNode) * table.nr_rows);
@@ -477,91 +551,102 @@ free(newNode.node_text);
     size_t nrNewChildren = 0;
 
     for (size_t i = 0; i < table.nr_rows; ++i) {
+
         if (i == 0 || !data_queries_equal(currentValue, bestAttrValues[i])) {
             DecisionTable subdata = get_filtered_table(table, best_attr, currentValue);
+
             if (subdata.titles == NULL) {
                 free(newNodeChildren);
                 free(bestAttrValues);
                 free(newNode.node_text);
                 return none;
             }
+
             if (subdata.nr_rows == 0) {
 
                 TextTreeNode* node = &newNodeChildren[nrNewChildren];
 
-        /* the simplest way to calculate mode element */
-        int* modeArr = malloc(table.nr_rows * sizeof(int));
-        if (!modeArr) {
-            free(newNodeChildren);
-free_filtered_table(subdata);
-                free(bestAttrValues);
-                free(newNode.node_text);
-             return none;
-        }
-        memset(modeArr, 0, sizeof(int) * table.nr_rows);
-
-        DataQueryKey maxNowKey;
-        size_t max_count = 0;
-        size_t all_count = 0;
-        while (all_count != table.nr_rows) {
-            size_t count = 0;
-            size_t idx = 0;
-            while (modeArr[idx]) ++idx;
-            DataQueryKey nowKey = table.data[idx*table.nr_columns+target_attribute];
-            ++count;
-            modeArr[idx] = 1;
-            while (idx != table.nr_rows) {
-                if (!modeArr[idx] &&
-                    data_queries_equal(nowKey, table.data[idx * table.nr_columns+target_attribute])) {
-                    modeArr[idx] = 1;
-                    ++count;
+                /* the simplest way to calculate mode element */
+                int* modeArr = malloc(table.nr_rows * sizeof(int));
+                if (!modeArr) {
+                    free(newNodeChildren);
+                    free_filtered_table(subdata);
+                        free(bestAttrValues);
+                        free(newNode.node_text);
+                    return none;
                 }
-                ++idx;
+                memset(modeArr, 0, sizeof(int) * table.nr_rows);
+
+                DataQueryKey maxNowKey;
+                size_t max_count = 0;
+                size_t all_count = 0;
+                while (all_count != table.nr_rows) {
+                    size_t count = 0;
+                    size_t idx = 0;
+                    while (modeArr[idx]) ++idx;
+                    DataQueryKey nowKey = table.data[idx*table.nr_columns+target_attribute];
+                    ++count;
+                    ++all_count;
+                    modeArr[idx] = 1;
+                    while (idx != table.nr_rows) {
+                        if (!modeArr[idx] &&
+                            data_queries_equal(nowKey, table.data[idx * table.nr_columns+target_attribute])) {
+                            modeArr[idx] = 1;
+                            ++count;
+                            ++all_count;
+                        }
+                        ++idx;
+                    }
+                    if (max_count < count) {
+                        max_count = count;
+                        maxNowKey = nowKey;
+                    }
+                }
+
+                free(modeArr);
+
+            DataQueryKey dominantClass = maxNowKey;
+            DataQueryKey strCvt;
+            int scss = convertToStr(&strCvt, dominantClass, 0);
+            
+            if (!scss) {
+                free(newNodeChildren);
+                free_filtered_table(subdata);
+                    free(bestAttrValues);
+                    free(newNode.node_text);
+                return none;
             }
-            if (max_count < count) {
-                max_count = count;
-                maxNowKey = nowKey;
+
+            node->node_text = malloc(strCvt.key.data.str.n+1);
+            if (!node->node_text) {
+                free(newNodeChildren);
+                free_filtered_table(subdata);
+                    free(bestAttrValues);
+                    free(newNode.node_text);
+                freeKey(&strCvt);
+                return none;
             }
-        }
 
-        free(modeArr);
+            strncpy(node->node_text, strCvt.key.data.str.ptr, strCvt.key.data.str.n);
+            node->node_text[strCvt.key.data.str.n] = 0;
 
-        DataQueryKey dominantClass = maxNowKey;
-        DataQueryKey strCvt = convertToStr(dominantClass);
-        if (strCvt.type == DQNone) {
-            free(newNodeChildren);
-free_filtered_table(subdata);
-                free(bestAttrValues);
-                free(newNode.node_text);
-            return none;
-        }
-
-        node->node_text = malloc(strCvt.key.data.str.n+1);
-        if (!node->node_text) {
-            free(newNodeChildren);
-free_filtered_table(subdata);
-                free(bestAttrValues);
-                free(newNode.node_text);
             freeKey(&strCvt);
-            return none;
-        }
 
-        strncpy(node->node_text, strCvt.key.data.str.ptr, strCvt.key.data.str.n);
-        node->node_text[strCvt.key.data.str.n] = 0;
-
-        node->parent_text = parent_text;
-        node->parent = parent;
-        node->children = NULL;
-        node->nr_children = 0;
-        
-        /*node*/
+            node->parent_text = parent_text;
+            node->parent = parent;
+            node->children = NULL;
+            node->nr_children = 0;
+            
+            /*node*/
 
             ++nrNewChildren;
 
             } else {
 
-                DataQueryKey newStrPtr = convertToStr(currentValue);
-                if (newStrPtr.type == DQNone) {
+                DataQueryKey newStrPtr;
+                int scss = convertToStr(&newStrPtr, currentValue, 0);
+
+                if (!scss) {
                     free(newNodeChildren);
                     free_filtered_table(subdata);
                     free(bestAttrValues);
@@ -570,17 +655,25 @@ free_filtered_table(subdata);
                 }
 
                 TextTreeNode* node = &newNodeChildren[nrNewChildren];
-
                 attributes[best_attr] = 1;
                 ++nr_attr;
+
+
+
+                
+                
                 *node = build_decision_tree(subdata, attributes, nr_attr, depth-1, target_attribute, newStrPtr.key.data.str.ptr, &newNode);
+                
+
+                
+
+
                 --nr_attr;
                 attributes[best_attr] = 0;
-
                 ++nrNewChildren;
-
             }
             currentValue = bestAttrValues[i];
+            free_filtered_table(subdata);
         }
     }
 
@@ -597,104 +690,8 @@ free_filtered_table(subdata);
     return newNode;
 }
 
-static DataQueryKey convertToStr(DataQueryKey data) {
-  if (data.type == DQString) {
-      char* p = malloc(data.key.data.str.n+1);
-      if (!p) {
-        data.type = DQNone;
-        return data;
-      }
-      p[data.key.data.str.n] = 0;
-      data.key.data.str.ptr = p;
-      return data;
-  }
 
-  if (data.type == DQInt) {
-    int len = snprintf(NULL, 0, "%ld", data.key.data.integ);
-    if (len == 0) {
-      data.type = DQNone;
-      return data;
-    }
-    char* str = malloc(len + 1);
-    if (!str) {
-      data.type = DQNone;
-      return data;
-    }
-    snprintf(str, len + 1, "%ld", data.key.data.integ);
-    data.key.data.str.ptr = str;
-    data.key.data.str.n = len;
-    data.type = DQString;
-    return data;
-  }
 
-  if (data.type == DQReal) {
-    int len = snprintf(NULL, 0, "%lf", data.key.data.real);
-    if (len == 0) {
-      data.type = DQNone;
-      return data;
-    }
-    char* str = malloc(len + 1);
-    if (!str) {
-      data.type = DQNone;
-      return data;
-    }
-    snprintf(str, len + 1, "%lf", data.key.data.real);
-    data.key.data.str.ptr = str;
-    data.key.data.str.n = len;
-    data.type = DQString;
-    return data;
-  }
-
-  if (data.type == DQList) {
-    DataQueryKey* ch_keys = malloc(sizeof(DataQueryKey) * data.key.data.list.n);
-    if (!ch_keys) {
-        data.type = DQNone; return data;
-    }
-    memset(ch_keys, 0, sizeof(DataQueryKey));
-    for (size_t i = 0; i < data.key.data.list.n; ++i) {
-        DataQueryKey c = convertToStr(data.key.data.list.root[i]);
-        if (c.type == DQNone) {
-            for (size_t j = 0; j < data.key.data.list.n; ++j) {
-                freeKey(&ch_keys[j]);
-                free(ch_keys);
-                data.type = DQNone; return data;
-            } 
-        }
-        ch_keys[i] = c;
-    }
-    size_t all_size = 2;
-    for (size_t i = 0; i < data.key.data.list.n; ++i) {
-        size_t n = ch_keys[i].key.data.str.n;
-        all_size += n + 1;
-    }
-    char* s = malloc(all_size+1);
-    if (!s) {
-        for (size_t j = 0; j < data.key.data.list.n; ++j) {
-                freeKey(&ch_keys[j]);
-                free(ch_keys);
-                data.type = DQNone; return data;
-            } 
-    }
-    s[all_size] = 0;
-    s[all_size-1] = ']';
-    s[0] = '[';
-    size_t place = 1;
-    for (size_t i = 0; i < data.key.data.list.n; ++i) {
-        strncpy(s+place, ch_keys[i].key.data.str.ptr, ch_keys[i].key.data.str.n);
-        place += ch_keys[i].key.data.str.n;
-        s[place] = ',';
-        ++place;
-    }
-
-    data.type = DQString;
-    data.key.data.str.ptr = s;
-    data.key.data.str.n = all_size;
-    return data;
-  }
-
-  data.type = DQNone;
-  return data;
-}
 
 
 

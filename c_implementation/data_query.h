@@ -62,6 +62,8 @@ void freeKey(DataQueryKey* data);
 
 DataQueryKey copyKeyStructure(DataQueryKey data);
 
+int convertToStr(DataQueryKey* dst, DataQueryKey data, size_t lvl);
+
 /* inverted Polish notation */
 /* arr: integers or words only */
 /* assumed list returned */

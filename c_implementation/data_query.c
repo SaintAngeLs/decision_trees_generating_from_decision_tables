@@ -18,8 +18,6 @@ static int calculate_min(DataQueryKey* dst, DataQueryKey data, size_t lvl);
 static int calculate_max(DataQueryKey* dst, DataQueryKey data, size_t lvl);
 static int get_count(DataQueryKey* dst, DataQueryKey data, size_t lvl);
 
-static int convertToStr(DataQueryKey* dst, DataQueryKey data, size_t lvl);
-
 void freeKey(DataQueryKey* data) {
   if (!data) return;
   if (data->type == DQString) {
@@ -468,7 +466,7 @@ static int convertToReal(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   return 0;
 }
 
-static int convertToStr(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
+int convertToStr(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
  if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
 
@@ -500,7 +498,7 @@ static int convertToStr(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
         *dst = data;
         return 0;
       }
-      memcpy(p, data.key.data.str.ptr, data.key.data.str.n+1);
+      memcpy(p, data.key.data.str.ptr, data.key.data.str.n);
       p[data.key.data.str.n] = 0;
       data.key.data.str.ptr = p;
       *dst = data;

@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
+#include <stdio.h>
 
 static size_t avl_height(const void *tree_root, size_t loft, size_t roft,
                   size_t hoft) {
@@ -27,7 +29,9 @@ static size_t avl_height(const void *tree_root, size_t loft, size_t roft,
 
 static void *avl_rotateright(void *x, size_t loft, size_t roft, size_t hoft) {
   void *y;
+  assert(x);
   y = *(void **)(x + loft);
+  assert(y);
   *(void **)(x + loft) = *(void **)(y + roft);
   *(void **)(y + roft) = x;
   *(size_t *)(x + hoft) = avl_height(x, loft, roft, hoft);
@@ -37,7 +41,9 @@ static void *avl_rotateright(void *x, size_t loft, size_t roft, size_t hoft) {
 
 static void *avl_rotateleft(void *x, size_t loft, size_t roft, size_t hoft) {
   void *y;
+  assert(x);
   y = *(void **)(x + roft);
+  assert(y);
   *(void **)(x + roft) = *(void **)(y + loft);
   *(void **)(y + loft) = x;
   *(size_t *)(x + hoft) = avl_height(x, loft, roft, hoft);
@@ -81,9 +87,23 @@ static void *avl_RL(void *tree_root, size_t loft, size_t roft, size_t hoft) {
   return tree_root;
 }
 
-void *avl_insert_impl(void *tree_root, void *elem, void *allocMem, size_t node_size,
+static void tree_assert(void*tree_root, size_t loft,
+                 size_t roft) {
+  assert(tree_root);
+  assert(*(void**)(tree_root+loft) != tree_root);
+  assert(*(void**)(tree_root+roft) != tree_root);
+
+  if (*(void**)(tree_root+loft))
+    tree_assert(*(void**)(tree_root+loft),  loft,  roft);
+
+  if (*(void**)(tree_root+roft))
+    tree_assert(*(void**)(tree_root+roft),  loft,  roft);
+}
+
+void *avl_insert_impl(void*tree_root, void *elem, void *allocMem, size_t node_size,
                  int (*comp)(const void *, const void *), size_t loft,
                  size_t roft, size_t hoft) {
+
   if (tree_root == NULL) {
     tree_root = allocMem;
     memcpy(tree_root, elem, node_size);
@@ -115,6 +135,9 @@ void *avl_insert_impl(void *tree_root, void *elem, void *allocMem, size_t node_s
     }
   }
   *(size_t *)(tree_root + hoft) = avl_height(tree_root, loft, roft, hoft);
+
+  tree_assert(tree_root, loft, roft);
+
   return tree_root;
 }
 
@@ -180,21 +203,32 @@ void *avl_erase_by_value_impl(void *tree_root, void *elem, size_t node_size,
 }
 
 void* avl_find_impl(void * root, int (*comp)(const void*, const void*), void* elem, size_t left_offset, size_t right_offset) {
-    if (!root) {
-        return NULL;
-    }
+    for (;;) {
 
-    if (comp(root, elem) == 0) {
-        return root;
-    }
+      if (!root) {
+          return NULL;
+      }
 
-    if (comp(root, elem) < 0) {
-        root = *(void**)(root + left_offset);
-    }
+      assert(elem);
+      assert(root);
 
-    if (comp(root, elem) > 0) {
-        root = *(void**)(root + right_offset);
-    }
+      if (comp(root, elem) == 0) {
+          return root;
+      }
 
-    return avl_find_impl(root, comp, elem, left_offset, right_offset);
+      assert(elem);
+      assert(root);
+
+      if (comp(root, elem) < 0) {
+          root = *(void**)(root + left_offset);
+      }
+      
+      /* don't compare nulls! */
+      else
+      
+      if (comp(root, elem) > 0) {
+          root = *(void**)(root + right_offset);
+      }
+
+    }
 }

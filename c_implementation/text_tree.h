@@ -36,6 +36,8 @@ typedef struct _TextTreeNode {
 
 } TextTreeNode;
 
+void print_decision_tree(TextTreeNode root, size_t depth);
+
 void free_text_tree(TextTreeNode root);
 
 #endif /* MINIML_TEXT_TREE_H */
