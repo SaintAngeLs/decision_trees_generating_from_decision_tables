@@ -1,9 +1,11 @@
 #include "data_query.h"
+#include "string_tree.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
+#include <unistd.h>
 
 static int convertToInt(DataQueryKey* dst, DataQueryKey data, size_t lvl);
 static int convertToReal(DataQueryKey* dst, DataQueryKey data, size_t lvl);
@@ -16,7 +18,7 @@ static int calculate_min(DataQueryKey* dst, DataQueryKey data, size_t lvl);
 static int calculate_max(DataQueryKey* dst, DataQueryKey data, size_t lvl);
 static int get_count(DataQueryKey* dst, DataQueryKey data, size_t lvl);
 
-static int convertToStr(DataQueryKey* dst, DataQueryKey data, int createNew, size_t lvl);
+static int convertToStr(DataQueryKey* dst, DataQueryKey data, size_t lvl);
 
 void freeKey(DataQueryKey* data) {
   if (!data) return;
@@ -29,6 +31,7 @@ void freeKey(DataQueryKey* data) {
     for (size_t i = data->key.data.list.n; i; --i, ++p) {
       freeKey(p);
     }
+    free(data->key.data.list.root);
   }
 }
 
@@ -41,7 +44,7 @@ static void freeKeys(DataQueryKey* arr, size_t sz, int doBreak) {
   }
 }
 
-static DataQueryKey copyKeyStructure(DataQueryKey data) {
+DataQueryKey copyKeyStructure(DataQueryKey data) {
   if (data.type != DQList) {
     switch (data.type) {
     case DQKeyword:
@@ -56,6 +59,7 @@ static DataQueryKey copyKeyStructure(DataQueryKey data) {
         data.type = DQNone;
         return data;
       }
+      memcpy(p, data.key.data.str.ptr, data.key.data.str.n);
       p[data.key.data.str.n] = 0;
       data.key.data.str.ptr = p;
       return data;
@@ -93,51 +97,57 @@ static DataQueryKey copyKeyStructure(DataQueryKey data) {
   return r;
 }
 
-/* data: none or list */
-DataQueryKey createTreeStructure(StringTreeNode tree, size_t* hierarchy, size_t hchy_size, size_t prop) {
-  DataQueryKey r;
-  
-  if (hchy_size == 0) {
-    size_t ssz = strlen(tree.children[prop].data);
-    char* new_str = malloc(ssz + 1);
-    if (!new_str) {
-      r.type = DQNone;
-      return r;
+DataQueryKey createTreeStructure(StringTreeNode tree, ssize_t* hierarchy, size_t hchy_size) {
+  while (hchy_size) {
+    if (*hierarchy == -1) {
+      /* vectorize */
+      ++hierarchy;
+      --hchy_size;
+
+      DataQueryKey list;
+      memset(&list, 0, sizeof(DataQueryKey));
+      list.type = DQList;
+      
+      list.key.data.list.n = tree.nr_children;
+      list.key.data.list.root = malloc(tree.nr_children * sizeof(DataQueryKey));
+      if (!list.key.data.list.root) {
+        list.type = DQNone;
+        return list;
+      }
+      memset(list.key.data.list.root, 0, tree.nr_children * sizeof(DataQueryKey));
+
+      for (size_t i = 0; i < tree.nr_children; ++i) {
+        list.key.data.list.root[i] = createTreeStructure(tree.children[i], hierarchy, hchy_size);
+        if (list.key.data.list.root[i].type == DQNone) {
+          freeKeys(list.key.data.list.root, tree.nr_children, 1);
+          list.type = DQNone;
+          return list;
+        }
+      }
+
+      return list;
     }
-    strncpy(new_str, tree.children[prop].data, ssz);
-    new_str[ssz] = 0;
-    r.key.data.str.ptr = new_str;
-    r.key.data.str.n = ssz;
-    r.type = DQString;
-    return r;
+
+    tree = tree.children[*hierarchy];
+    ++hierarchy;
+    --hchy_size;
   }
 
-  r.type = DQList;
-  StringTreeNode ch = tree.children[*hierarchy];
-  r.key.data.list.root = malloc(sizeof(DataQueryKey) * ch.nr_children);
-  if (!r.key.data.list.root) {
-    r.type = DQNone;
-    return r;
+  DataQueryKey key;
+  key.type = DQString;
+  size_t strln = strlen(tree.data);
+  key.key.data.str.ptr = malloc(strln + 1);
+  if (!key.key.data.str.ptr) {
+    key.type = DQNone;
+    return key;
   }
-  r.key.data.list.n = ch.nr_children;
-
-  StringTreeNode* p = ch.children;
-  for (size_t i = ch.nr_children; i; --i, ++p) {
-    r.key.data.list.root[i] =
-      createTreeStructure(ch, hierarchy+1, hchy_size-1, prop);
-
-    if (r.key.data.list.root[i].type == DQNone) {
-      freeKeys(r.key.data.list.root, ch.nr_children, 1);
-      free(r.key.data.list.root);
-      r.type = DQNone;
-      return r; 
-    }
-  }
-  
-  return r;
+  strncpy(key.key.data.str.ptr, tree.data, strln);
+  key.key.data.str.ptr[strln] = 0;
+  key.key.data.str.n = strln;
+  return key;
 }
 
-void data_query_exit(DataQueryKey *execStack, DataQueryKey *stackp, size_t *treeStack) {
+void data_query_exit(DataQueryKey *execStack, DataQueryKey *stackp, ssize_t *treeStack) {
   freeKeys(execStack, (stackp+1-execStack), 0);
   free(execStack);
   free(treeStack);
@@ -157,13 +167,16 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
   size_t execStackCap = size;
 
   /* tree prop stack */
-  size_t *treeStack = malloc(100 * sizeof(size_t));
+  ssize_t *treeStack = malloc(100 * sizeof(ssize_t));
   if (!treeStack) {
     free(execStack);
     return none;
   }
-  size_t *treeptr = treeStack-1;
+  ssize_t *treeptr = treeStack-1;
   size_t treeStackCap = 100;
+
+  /* level 'state' */
+  size_t lvl = 0;
 
   DataQueryKey *execp = arr;
   size_t i;
@@ -175,9 +188,8 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
       switch (execp->key.word) {
       case DQK_toInt: {
         if (!(stackp+1-execStack)) { data_query_exit(execStack, stackp, treeStack); return none; }
-        DataQueryKey r = copyKeyStructure(*stackp);
-        if (r.type == DQNone) { data_query_exit(execStack, stackp, treeStack); return none; }
-        int sccdd = convertToInt(&r, *stackp, (treeptr+1-treeStack));
+        DataQueryKey r;
+        int sccdd = convertToInt(&r, *stackp, lvl);
         if (!sccdd) { freeKey(&r); data_query_exit(execStack, stackp, treeStack); return none; }
         freeKey(stackp);
         *stackp = r;
@@ -185,9 +197,8 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
       }
       case DQK_toFloat: {
         if (!(stackp+1-execStack)) { data_query_exit(execStack, stackp, treeStack); return none; }
-        DataQueryKey r = copyKeyStructure(*stackp);
-        if (r.type == DQNone) { data_query_exit(execStack, stackp, treeStack); return none; }
-        int sccdd = convertToReal(&r, *stackp, (treeptr+1-treeStack)); /* changed this only */
+        DataQueryKey r;
+        int sccdd = convertToReal(&r, *stackp, lvl); /* changed this only */
         if (!sccdd) { freeKey(&r); data_query_exit(execStack, stackp, treeStack); return none; }
         freeKey(stackp);
         *stackp = r;
@@ -195,36 +206,49 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
       }
       case DQK_toStr: {
         if (!(stackp+1-execStack)) { data_query_exit(execStack, stackp, treeStack); return none; }
-        DataQueryKey r = copyKeyStructure(*stackp);
-        if (r.type == DQNone) { data_query_exit(execStack, stackp, treeStack); return none; }
-        int sccdd = convertToStr(&r, *stackp, 1, (treeptr+1-treeStack)); /* changed this only */
+        DataQueryKey r;
+        int sccdd = convertToStr(&r, *stackp, lvl); /* changed this only */
         if (!sccdd) { freeKey(&r); data_query_exit(execStack, stackp, treeStack); return none; }
         freeKey(stackp);
         *stackp = r;
         break;
       }
       case DQK_propId: {
+        /*assert*/
         if (!(stackp+1-execStack) || stackp->type != DQInt || stackp->key.data.integ < 0)
           { data_query_exit(execStack, stackp, treeStack); return none; }
 
-        DataQueryKey newKey = createTreeStructure(tree, treeStack, (treeptr+1-treeStack), stackp->key.data.integ);
-        if (newKey.type == DQNone) { data_query_exit(execStack, stackp, treeStack); return none; }
-        
-        *stackp = newKey;
+        /*check capacity*/
+        if ((treeptr+1-treeStack) == treeStackCap) {
+          ssize_t* newTreeStack = realloc(treeStack, (treeStackCap + 100)*sizeof(size_t));
+          if (!newTreeStack) { data_query_exit(execStack, stackp, treeStack); return none; }
+          treeStack = newTreeStack;
+          treeStackCap = treeStackCap + 100;
+        }
+
+        /*add prop*/
+        ++treeptr;
+        *treeptr = stackp->key.data.integ;
+        --stackp;
         break;
       }
       case DQK_foreach: {
-        if (!(stackp+1-execStack) || stackp->type != DQInt || stackp->key.data.integ < 0)
-          { data_query_exit(execStack, stackp, treeStack); return none; }
-
         if ((treeptr+1-treeStack) == treeStackCap) {
-          size_t* newTreeStack = realloc(treeStack, (treeStackCap + 100)*sizeof(size_t));
+          ssize_t* newTreeStack = realloc(treeStack, (treeStackCap + 100)*sizeof(size_t));
           if (!newTreeStack) { data_query_exit(execStack, stackp, treeStack); return none; }
           treeStack = newTreeStack;
           treeStackCap = treeStackCap + 100;
         }
         ++treeptr;
-        *treeptr = stackp->key.data.integ;
+        *treeptr = -1; /* 'for each' */
+        break;
+      }
+      case DQK_changeLvl: {
+        /*assert*/
+        if (!(stackp+1-execStack) || stackp->type != DQInt || stackp->key.data.integ < 0)
+          { data_query_exit(execStack, stackp, treeStack); return none; }
+
+        lvl = stackp->key.data.integ;
         --stackp;
         break;
       }
@@ -235,9 +259,8 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
       }
       case DQK_union: {
         if (!(stackp+1-execStack)) { data_query_exit(execStack, stackp, treeStack); return none; }
-        DataQueryKey r = copyKeyStructure(*stackp);
-        if (r.type == DQNone) { data_query_exit(execStack, stackp, treeStack); return none; }
-        int sccdd = create_union(&r, *stackp, (treeptr+1-treeStack));
+        DataQueryKey r;
+        int sccdd = create_union(&r, *stackp, lvl);
         if (!sccdd) { freeKey(&r); data_query_exit(execStack, stackp, treeStack); return none; }
         freeKey(stackp);
         *stackp = r;
@@ -245,19 +268,20 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
       }
       case DQK_multiplication: {
         if (!(stackp+1-execStack)) { data_query_exit(execStack, stackp, treeStack); return none; }
-        DataQueryKey r = copyKeyStructure(*stackp);
-        if (r.type == DQNone) { data_query_exit(execStack, stackp, treeStack); return none; }
-        int sccdd = calculate_multiplication(&r, *stackp, (treeptr+1-treeStack));
+
+        DataQueryKey r;
+
+        int sccdd = calculate_multiplication(&r, *stackp, lvl);
         if (!sccdd) { freeKey(&r); data_query_exit(execStack, stackp, treeStack); return none; }
+
         freeKey(stackp);
         *stackp = r;
         break;
       }
       case DQK_count: {
         if (!(stackp+1-execStack)) { data_query_exit(execStack, stackp, treeStack); return none; }
-        DataQueryKey r = copyKeyStructure(*stackp);
-        if (r.type == DQNone) { data_query_exit(execStack, stackp, treeStack); return none; }
-        int sccdd = get_count(&r, *stackp, (treeptr+1-treeStack));
+        DataQueryKey r;
+        int sccdd = get_count(&r, *stackp, lvl);
         if (!sccdd) { freeKey(&r); data_query_exit(execStack, stackp, treeStack); return none; }
         freeKey(stackp);
         *stackp = r;
@@ -265,9 +289,8 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
       }
       case DQK_avg: {
         if (!(stackp+1-execStack)) { data_query_exit(execStack, stackp, treeStack); return none; }
-        DataQueryKey r = copyKeyStructure(*stackp);
-        if (r.type == DQNone) { data_query_exit(execStack, stackp, treeStack); return none; }
-        int sccdd = calculate_avg(&r, *stackp, (treeptr+1-treeStack));
+        DataQueryKey r;
+        int sccdd = calculate_avg(&r, *stackp, lvl);
         if (!sccdd) { freeKey(&r); data_query_exit(execStack, stackp, treeStack); return none; }
         freeKey(stackp);
         *stackp = r;
@@ -275,9 +298,8 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
       }
       case DQK_sum: {
         if (!(stackp+1-execStack)) { data_query_exit(execStack, stackp, treeStack); return none; }
-        DataQueryKey r = copyKeyStructure(*stackp);
-        if (r.type == DQNone) { data_query_exit(execStack, stackp, treeStack); return none; }
-        int sccdd = calculate_sum(&r, *stackp, (treeptr+1-treeStack));
+        DataQueryKey r;
+        int sccdd = calculate_sum(&r, *stackp, lvl);
         if (!sccdd) { freeKey(&r); data_query_exit(execStack, stackp, treeStack); return none; }
         freeKey(stackp);
         *stackp = r;
@@ -285,9 +307,8 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
       }
       case DQK_min: {
         if (!(stackp+1-execStack)) { data_query_exit(execStack, stackp, treeStack); return none; }
-        DataQueryKey r = copyKeyStructure(*stackp);
-        if (r.type == DQNone) { data_query_exit(execStack, stackp, treeStack); return none; }
-        int sccdd = calculate_min(&r, *stackp, (treeptr+1-treeStack));
+        DataQueryKey r;
+        int sccdd = calculate_min(&r, *stackp, lvl);
         if (!sccdd) { freeKey(&r); data_query_exit(execStack, stackp, treeStack); return none; }
         freeKey(stackp);
         *stackp = r;
@@ -295,12 +316,19 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
       }
       case DQK_max: {
         if (!(stackp+1-execStack)) { data_query_exit(execStack, stackp, treeStack); return none; }
-        DataQueryKey r = copyKeyStructure(*stackp);
-        if (r.type == DQNone) { data_query_exit(execStack, stackp, treeStack); return none; }
-        int sccdd = calculate_max(&r, *stackp, (treeptr+1-treeStack));
+        DataQueryKey r;
+        int sccdd = calculate_max(&r, *stackp, lvl);
         if (!sccdd) { freeKey(&r); data_query_exit(execStack, stackp, treeStack); return none; }
         freeKey(stackp);
         *stackp = r;
+        break;
+      }
+      case DQK_fetch: {
+        DataQueryKey newKey = createTreeStructure(tree, treeStack, (treeptr+1-treeStack));
+        if (newKey.type == DQNone) { data_query_exit(execStack, stackp, treeStack); return none; }
+        
+        ++stackp;
+        memcpy(stackp, &newKey, sizeof(DataQueryKey));
         break;
       }
       }
@@ -308,12 +336,21 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
       /* clang-format on */
 
     } else {
-      memcpy(stackp, arr, sizeof(DataQueryKey));
+
       ++stackp;
+      memcpy(stackp, execp, sizeof(DataQueryKey));
     }
   }
 
+  /* if stack if empty */
   if ((stackp+1-execStack) == 0) {
+    free(execStack);
+    free(treeStack);
+    return none;
+  }
+
+  /* if stack is not from a single element */
+  if ((stackp+1-execStack) > 1) {
     freeKeys(execStack, (stackp+1-execStack), 0);
     free(execStack);
     free(treeStack);
@@ -322,13 +359,8 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
 
   DataQueryKey result;
   memcpy(&result, execStack, sizeof(DataQueryKey));
-  freeKeys(execStack, (stackp+1-execStack), 0);
   free(execStack);
   free(treeStack);
-
-  if ((stackp+1-execStack) > 1) {
-    return none;
-  }
 
   return result;
 }
@@ -337,12 +369,24 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
 static int convertToInt(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
-    DataQueryKey* dstp = dst->key.data.list.root;
+
+    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    if (!dstarr) {
+      return 0;
+    }
+
+    DataQueryKey* dstp = dstarr;
     for (size_t i = data.key.data.list.n; i; --i, ++datap, ++dstp) {
       if (!convertToInt(dstp, *datap, lvl-1)) {
+        freeKeys(dstarr, data.key.data.list.n, 1);
+        free(dstarr);
         return 0;
       }
     }
+
+    dst->key.data.list.root = dstarr;
+    dst->key.data.list.n = data.key.data.list.n;
+    dst->type = DQList;
     return 1;
   }
 
@@ -376,12 +420,24 @@ static int convertToInt(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
 static int convertToReal(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
-    DataQueryKey* dstp = dst->key.data.list.root;
+
+    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    if (!dstarr) {
+      return 0;
+    }
+
+    DataQueryKey* dstp = dstarr;
     for (size_t i = data.key.data.list.n; i; --i, ++datap, ++dstp) {
-      if (!convertToInt(dstp, *datap, lvl-1)) {
+      if (!convertToReal(dstp, *datap, lvl-1)) {
+        freeKeys(dstarr, data.key.data.list.n, 1);
+        free(dstarr);
         return 0;
       }
     }
+
+    dst->key.data.list.root = dstarr;
+    dst->key.data.list.n = data.key.data.list.n;
+    dst->type = DQList;
     return 1;
   }
 
@@ -412,26 +468,39 @@ static int convertToReal(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   return 0;
 }
 
-static int convertToStr(DataQueryKey* dst, DataQueryKey data, int createNew, size_t lvl) {
-  if (lvl) {
+static int convertToStr(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
+ if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
-    DataQueryKey* dstp = dst->key.data.list.root;
+
+    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    if (!dstarr) {
+      return 0;
+    }
+
+    DataQueryKey* dstp = dstarr;
     for (size_t i = data.key.data.list.n; i; --i, ++datap, ++dstp) {
-      if (!convertToInt(dstp, *datap, lvl-1)) {
+      if (!convertToStr(dstp, *datap,  lvl-1)) {
+        freeKeys(dstarr, data.key.data.list.n, 1);
+        free(dstarr);
         return 0;
       }
     }
+
+    dst->key.data.list.root = dstarr;
+    dst->key.data.list.n = data.key.data.list.n;
+    dst->type = DQList;
     return 1;
   }
 
   if (data.type == DQString) {
-    if (createNew) {
+    if (1) {
       char* p = malloc(data.key.data.str.n+1);
       if (!p) {
         data.type = DQNone;
         *dst = data;
         return 0;
       }
+      memcpy(p, data.key.data.str.ptr, data.key.data.str.n+1);
       p[data.key.data.str.n] = 0;
       data.key.data.str.ptr = p;
       *dst = data;
@@ -483,18 +552,77 @@ static int convertToStr(DataQueryKey* dst, DataQueryKey data, int createNew, siz
     return 1;
   }
 
+  if (data.type == DQList) {
+    size_t n = data.key.data.list.n;
+    DataQueryKey* arr = calloc(n, sizeof(DataQueryKey));
+    if (!arr) {
+      return 0;
+    }
+    for (size_t i = 0; i < n; ++i) {
+      int scss = convertToStr(arr+i, data.key.data.list.root[i], 0);
+      if (!scss) {
+        freeKeys(arr, n, 1);
+        free(arr);
+        return 0;
+      }
+    }
+    size_t len = 0;
+    for (size_t i = 0; i < n; ++i) {
+      len += arr[i].key.data.str.n + 3;
+    }
+    char* newStr = malloc(len);
+    if (!newStr) {
+      freeKeys(arr,n,0);
+      free(arr);
+      return 0;
+    }
+
+    size_t cc = 0;
+    for (size_t i = 0; i < n; ++i) {
+      newStr[cc] = '[';
+      ++cc;
+      memcpy(newStr+cc, arr[i].key.data.str.ptr, arr[i].key.data.str.n);
+      cc += arr[i].key.data.str.n;
+      newStr[cc] = ']';
+      ++cc;
+      newStr[cc] = ' ';
+    }
+
+    newStr[cc] = '\0';
+
+    freeKeys(arr,n,0);
+    free(arr);
+    data.type = DQString;
+    data.key.data.str.ptr = newStr;
+    data.key.data.str.n = len;
+    *dst = data;
+    return 1;
+  }
+
   return 0;
 }
 
 static int create_union(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
-    DataQueryKey* dstp = dst->key.data.list.root;
+
+    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    if (!dstarr) {
+      return 0;
+    }
+
+    DataQueryKey* dstp = dstarr;
     for (size_t i = data.key.data.list.n; i; --i, ++datap, ++dstp) {
       if (!create_union(dstp, *datap, lvl-1)) {
+        freeKeys(dstarr, data.key.data.list.n, 1);
+        free(dstarr);
         return 0;
       }
     }
+
+    dst->key.data.list.root = dstarr;
+    dst->key.data.list.n = data.key.data.list.n;
+    dst->type = DQList;
     return 1;
   }
 
@@ -540,12 +668,24 @@ static int create_union(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
 static int calculate_avg(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
-    DataQueryKey* dstp = dst->key.data.list.root;
+
+    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    if (!dstarr) {
+      return 0;
+    }
+
+    DataQueryKey* dstp = dstarr;
     for (size_t i = data.key.data.list.n; i; --i, ++datap, ++dstp) {
       if (!calculate_avg(dstp, *datap, lvl-1)) {
+        freeKeys(dstarr, data.key.data.list.n, 1);
+        free(dstarr);
         return 0;
       }
     }
+
+    dst->key.data.list.root = dstarr;
+    dst->key.data.list.n = data.key.data.list.n;
+    dst->type = DQList;
     return 1;
   }
 
@@ -595,12 +735,24 @@ static int calculate_avg(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
 static int calculate_sum(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
-    DataQueryKey* dstp = dst->key.data.list.root;
+
+    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    if (!dstarr) {
+      return 0;
+    }
+
+    DataQueryKey* dstp = dstarr;
     for (size_t i = data.key.data.list.n; i; --i, ++datap, ++dstp) {
       if (!calculate_sum(dstp, *datap, lvl-1)) {
+        freeKeys(dstarr, data.key.data.list.n, 1);
+        free(dstarr);
         return 0;
       }
     }
+
+    dst->key.data.list.root = dstarr;
+    dst->key.data.list.n = data.key.data.list.n;
+    dst->type = DQList;
     return 1;
   }
 
@@ -650,12 +802,24 @@ static int calculate_sum(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
 static int calculate_multiplication(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
-    DataQueryKey* dstp = dst->key.data.list.root;
+
+    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    if (!dstarr) {
+      return 0;
+    }
+
+    DataQueryKey* dstp = dstarr;
     for (size_t i = data.key.data.list.n; i; --i, ++datap, ++dstp) {
       if (!calculate_multiplication(dstp, *datap, lvl-1)) {
+        freeKeys(dstarr, data.key.data.list.n, 1);
+        free(dstarr);
         return 0;
       }
     }
+
+    dst->key.data.list.root = dstarr;
+    dst->key.data.list.n = data.key.data.list.n;
+    dst->type = DQList;
     return 1;
   }
 
@@ -705,12 +869,24 @@ static int calculate_multiplication(DataQueryKey* dst, DataQueryKey data, size_t
 static int calculate_min(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
-    DataQueryKey* dstp = dst->key.data.list.root;
+
+    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    if (!dstarr) {
+      return 0;
+    }
+
+    DataQueryKey* dstp = dstarr;
     for (size_t i = data.key.data.list.n; i; --i, ++datap, ++dstp) {
       if (!calculate_min(dstp, *datap, lvl-1)) {
+        freeKeys(dstarr, data.key.data.list.n, 1);
+        free(dstarr);
         return 0;
       }
     }
+
+    dst->key.data.list.root = dstarr;
+    dst->key.data.list.n = data.key.data.list.n;
+    dst->type = DQList;
     return 1;
   }
 
@@ -762,12 +938,24 @@ static int calculate_min(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
 static int calculate_max(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
-    DataQueryKey* dstp = dst->key.data.list.root;
+
+    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    if (!dstarr) {
+      return 0;
+    }
+
+    DataQueryKey* dstp = dstarr;
     for (size_t i = data.key.data.list.n; i; --i, ++datap, ++dstp) {
       if (!calculate_max(dstp, *datap, lvl-1)) {
+        freeKeys(dstarr, data.key.data.list.n, 1);
+        free(dstarr);
         return 0;
       }
     }
+
+    dst->key.data.list.root = dstarr;
+    dst->key.data.list.n = data.key.data.list.n;
+    dst->type = DQList;
     return 1;
   }
 
@@ -819,12 +1007,24 @@ static int calculate_max(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
 static int get_count(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
-    DataQueryKey* dstp = dst->key.data.list.root;
+
+    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    if (!dstarr) {
+      return 0;
+    }
+
+    DataQueryKey* dstp = dstarr;
     for (size_t i = data.key.data.list.n; i; --i, ++datap, ++dstp) {
       if (!get_count(dstp, *datap, lvl-1)) {
+        freeKeys(dstarr, data.key.data.list.n, 1);
+        free(dstarr);
         return 0;
       }
     }
+
+    dst->key.data.list.root = dstarr;
+    dst->key.data.list.n = data.key.data.list.n;
+    dst->type = DQList;
     return 1;
   }
 

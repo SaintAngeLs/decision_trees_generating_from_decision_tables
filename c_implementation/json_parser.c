@@ -51,6 +51,7 @@ int json_add_property(struct JsonReadStates *jss) {
   return 1;
 }
 
+
 StringTreeNode read_from_json(const char *json_contents) {
   StringTreeNode tree;
   memset(&tree, 0, sizeof(tree));
@@ -273,5 +274,16 @@ StringTreeNode read_from_json(const char *json_contents) {
   free(jss.name);
   free(jss.str_input);
   free_string_stack(jss.stack, 1);
+
   return tree;
 }
+
+/*
+
+ printf("[%p]\n", tree.children);
+    printf("[%lu]\n", tree.nr_children);
+
+
+
+
+*/

@@ -1,5 +1,32 @@
+/* approved */
 #include "parser_utils.h"
 #include <stdlib.h>
+
+void printStringTree(StringTreeNode* st, int level) {
+	if (st->name) {
+		for (int i = 0; i < level; ++i) {
+		printf("    ");
+	}
+		printf("Name [%s]\n", st->name);
+	}
+	if (st->data) {
+		for (int i = 0; i < level; ++i) {
+		printf("    ");
+	}
+		printf("Prop [%s]\n", st->data);
+	}
+	for (int i = 0; i < level; ++i) {
+		printf("    ");
+	}
+	printf("Nr of children: [%lu]\n", st->nr_children);
+	for (size_t i = 0; i < st->nr_children; ++i) {
+		for (int i = 0; i < level; ++i) {
+			printf("    ");
+		}
+		printf("Child %lu:\n", i);
+		printStringTree(&st->children[i], level+1);
+	}
+}
 
 char* get_file_contents(FILE* fp) {
   /* size */
@@ -30,6 +57,15 @@ char* get_file_contents(FILE* fp) {
     return str;
 }
 
+char* get_str_from_file(const char* filename) {
+	FILE* fp = fopen(filename, "r");
+	if (!fp) return NULL;
+	char* str = get_file_contents(fp);
+	fclose(fp);
+	return str;
+}
+
+/* for parsers */
 void free_tree_list(TreeListNode *head, int keep_children) {
   while (head) {
     TreeListNode *temp = head;
@@ -40,6 +76,7 @@ void free_tree_list(TreeListNode *head, int keep_children) {
   }
 }
 
+/* for parsers */
 void free_string_stack(StringNode *head, int keep_children) {
   while (head) {
     StringNode *temp = head;

@@ -1,6 +1,9 @@
 #ifndef MINIML_UNIT_TESTS_H
 #define MINIML_UNIT_TESTS_H
+#include "string_tree.h"
 #include <stdio.h>
+
+
 
 void ut_read_csv_from(FILE* fp);
 

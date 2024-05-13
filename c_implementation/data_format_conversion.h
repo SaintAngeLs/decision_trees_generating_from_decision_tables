@@ -5,6 +5,7 @@
 #include "csv_data_parser.h"
 #include "string_tree.h"
 
+/* if no titles, that's invalid */
 typedef struct {
     char** titles;
     size_t nr_columns;
@@ -12,12 +13,17 @@ typedef struct {
     DataQueryKey* data;
 } DecisionTable;
 
-DecisionTable create_decision_tree_from_csv(CsvData* csv, DataQueryType* types);
+void print_decision_table(DecisionTable table);
+
+void free_decision_table(DecisionTable table, int with_titles);
+
+DecisionTable create_decision_table_from_csv(CsvData* csv, DataQueryType* types);
 
 /* seletion == NULL => selects all with property */
 /* order matters */
-/* ADD TITLES */
-DecisionTable create_decision_tree_from_parsed_tree(StringTreeNode tree,
+/* titles are copied not deeply */
+DecisionTable create_decision_table_from_parsed_tree(StringTreeNode tree,
+        char** titles,
         DataQueryKey** instrPtr,
         size_t* instr_size_ptr,
         size_t nr_columns);

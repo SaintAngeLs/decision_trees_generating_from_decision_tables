@@ -1,8 +1,24 @@
 #include "data_format_conversion.h"
 #include "data_query.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
+
+void print_decision_table(DecisionTable table) {
+    for (size_t j = 0; j < table.nr_columns; ++j) {
+        printf("[%s] ", table.titles[j]);
+    }
+    printf("\n");
+
+    for (size_t i = 0; i < table.nr_rows; ++i) {
+        for (size_t j = 0; j < table.nr_columns; ++j) {
+            
+
+            printf("[%s] ", table.data[i*table.nr_columns+j].key.data.str.ptr);
+        }
+        printf("\n");
+    }
+}
 
 void free_data_table(DataQueryKey* data, size_t width, size_t height) {
     for (size_t i = 0; i < height; ++i) {
@@ -13,7 +29,18 @@ void free_data_table(DataQueryKey* data, size_t width, size_t height) {
     free(data);
 }
 
-DecisionTable create_decision_tree_from_csv(CsvData* csv, DataQueryType* types) {
+void free_decision_table(DecisionTable table, int with_titles) {
+    free_data_table(table.data, table.nr_columns, table.nr_rows);
+    if (with_titles) {
+        for (size_t i = 0; i < table.nr_columns; ++i) {
+            free(table.titles[i]);
+        }
+        free(table.titles);
+    }
+}
+
+/*TODO check*/
+DecisionTable create_decision_table_from_csv(CsvData* csv, DataQueryType* types) {
     DecisionTable dectab;
     memset(&dectab, 0, sizeof(dectab));
     
@@ -93,39 +120,55 @@ DecisionTable create_decision_tree_from_csv(CsvData* csv, DataQueryType* types) 
     return dectab;
 }
 
-DecisionTable create_decision_tree_from_parsed_tree(StringTreeNode tree,
+DecisionTable create_decision_table_from_parsed_tree(StringTreeNode tree,
+        char** titles,
         DataQueryKey** instrPtr,
         size_t* instr_size_ptr,
         size_t nr_columns) {
 
     DecisionTable dectab;
     memset(&dectab, 0, sizeof(dectab));
-    
-    size_t n = tree.nr_children;
-    if (n == 0) {
+
+    /* first */
+    size_t n;
+    DataQueryKey firstKey = miniml_data_query(instrPtr[0], instr_size_ptr[0], tree);
+    if (firstKey.type != DQList) {
+        freeKey(&firstKey);
         return dectab;
     }
 
-    assert(tree.children);
-
+    n = firstKey.key.data.list.n;
+    
     DataQueryKey* newData = malloc(n*nr_columns * sizeof(DataQueryKey));
     if (!newData) {
+        freeKey(&firstKey);
         return dectab;
     }
 
     memset(newData, 0, sizeof(DataQueryKey));
 
+    /*first*/
     for (size_t i = 0; i < n; ++i) {
-        for (size_t j = 0; j < nr_columns; ++j) {
-            newData[i*nr_columns+j] = miniml_data_query(instrPtr[j], instr_size_ptr[j], tree.children[i]);
-            if (newData[i*nr_columns+j].type == DQNone) {
-                free_data_table(newData, nr_columns, n);
-                free(newData);
-                return dectab;
-            }
+        /* move */
+        newData[i*nr_columns+0] = firstKey.key.data.list.root[i];
+    }
+    free(firstKey.key.data.list.root);
+
+    for (size_t j = 1; j < nr_columns; ++j) {
+        firstKey = miniml_data_query(instrPtr[j], instr_size_ptr[j], tree);
+        if (firstKey.type != DQList || firstKey.key.data.list.n != n) {
+            freeKey(&firstKey);
+            free_data_table(newData, nr_columns, n);
+            return dectab;
         }
+        for (size_t i = 0; i < n; ++i) {
+            /* move */
+            newData[i*nr_columns+j] = firstKey.key.data.list.root[i];
+        }
+        free(firstKey.key.data.list.root);
     }
 
+    dectab.titles = titles;
     dectab.data = newData;
     dectab.nr_columns = nr_columns;
     dectab.nr_rows = n;

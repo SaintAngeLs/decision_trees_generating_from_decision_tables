@@ -4,6 +4,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* Preparing AVL trees for each type */
+
+/* AVL of data query keys */
 typedef struct DataQueryKeyAvlNode_ {
     DataQueryKey value;
     size_t nr;
@@ -15,6 +18,7 @@ typedef struct DataQueryKeyAvlNode_ {
 
 } DataQueryKeyAvlNode;
 
+/* AVL of AVLs */
 typedef struct DataQueryKeyAvlNode2_ {
     DataQueryKey value;
     DataQueryKeyAvlNode* subavl;
@@ -31,7 +35,6 @@ DataQueryKeyAvlNode* avl_insert(DataQueryKeyAvlNode* tree_root, DataQueryKey ele
                   int (*comp)( const void*,  const void*)
                  );
 
-/* free */
 DataQueryKeyAvlNode* avl_delete_value(DataQueryKeyAvlNode* tree_root, DataQueryKey valueElem,
                         int (*comp)( const void*,  const void*));
 
@@ -45,7 +48,6 @@ DataQueryKeyAvlNode2* avl_insert2(DataQueryKeyAvlNode2* tree_root, DataQueryKey 
                   int (*comp)( const void*,  const void*)
                  );
 
-/* free */
 DataQueryKeyAvlNode2* avl_delete_value2(DataQueryKeyAvlNode2* tree_root, DataQueryKey elem,
                         int (*comp)( const void*,  const void*));
 

@@ -18,9 +18,12 @@ typedef enum DataQueryKeyword_ {
         DQK_toFloat,
         DQK_toStr,
 
-        DQK_propId,
-        DQK_foreach,
-        DQK_up,
+        DQK_propId,  /* refer to property */
+        DQK_foreach, /* refer to all children */
+        DQK_up,      /* go back to root */
+        DQK_changeLvl,
+
+        DQK_fetch,
 
         /* List -> Value */
         DQK_sum,
@@ -57,8 +60,11 @@ typedef struct DataQueryKey_ {
 
 void freeKey(DataQueryKey* data);
 
+DataQueryKey copyKeyStructure(DataQueryKey data);
+
 /* inverted Polish notation */
 /* arr: integers or words only */
+/* assumed list returned */
 DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
                                StringTreeNode tree);
 

@@ -51,32 +51,6 @@ void csv_test() {
 
 extern const char* const xml_contents;
 
-void printStringTree(StringTreeNode* st, int level) {
-	if (st->name) {
-		for (int i = 0; i < level; ++i) {
-		printf("    ");
-	}
-		printf("Name [%s]\n", st->name);
-	}
-	if (st->data) {
-		for (int i = 0; i < level; ++i) {
-		printf("    ");
-	}
-		printf("Prop [%s]\n", st->data);
-	}
-	for (int i = 0; i < level; ++i) {
-		printf("    ");
-	}
-	printf("Nr of children: [%lu]\n", st->nr_children);
-	for (size_t i = 0; i < st->nr_children; ++i) {
-		for (int i = 0; i < level; ++i) {
-			printf("    ");
-		}
-		printf("Child %lu:\n", i);
-		printStringTree(&st->children[i], level+1);
-	}
-}
-
 void xml_test() {
 	FILE* fp = fopen("data/example.xml", "r");
 	if (!fp) return;
