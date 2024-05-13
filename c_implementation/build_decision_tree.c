@@ -5,12 +5,67 @@
 #include "heap_sort.h"
 #include "text_tree.h"
 #include <math.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
-static int data_queries_equal(DataQueryKey left, DataQueryKey right);
+int data_queries_equal(DataQueryKey left, DataQueryKey right) {
+    if (left.type != right.type) {
+        return 0;
+    }
+
+    if (left.type == DQInt) {
+        return left.key.data.integ == right.key.data.integ;
+    }
+
+    if (left.type == DQReal) {
+        return left.key.data.real == right.key.data.real;
+    }
+
+    if (left.type == DQString) {
+        /*assert(strlen(left.key.data.str.ptr) == left.key.data.str.n);
+        assert(strlen(right.key.data.str.ptr) == right.key.data.str.n);*/
+
+        /*if (left.key.data.str.n != right.key.data.str.n) {
+            return 0;
+        }*/
+
+        char* l = left.key.data.str.ptr;
+        char* r = right.key.data.str.ptr;
+        for (; 1; ++l, ++r) {
+            if (!*l && !*r) {
+                return 1;
+            }
+            if (*l != *r) {
+                return 0;
+            }
+        }
+        return 1;
+    }
+
+    if (left.type == DQKeyword) {
+        return left.key.word == right.key.word;
+    }
+
+    if (left.type == DQNone) {
+        return 0;
+    }
+
+    if (left.type == DQList) {
+        if (left.key.data.list.n != right.key.data.list.n) {
+            return 0;
+        }
+
+        for (size_t i = 0; i < left.key.data.list.n; ++i) {
+            if (!data_queries_equal(left.key.data.list.root[i],right.key.data.list.root[i])) {
+                return 0;
+            }
+        }
+        return 1;
+    }
+
+    return 1;
+}
 
 /* table 'view', no deep copying */
 static DecisionTable get_filtered_table(DecisionTable table, size_t best_attr, DataQueryKey value) {
@@ -57,26 +112,30 @@ static void free_filtered_table(DecisionTable table) {
 }
 
 int compare_dqks_(DataQueryKey l, DataQueryKey r) {
-    union {
-        DataQueryKey in;
-        intmax_t out;
-    } conv;
-
-    intmax_t lc, rc;
-    conv.in = l;
-    lc = conv.out;
-
-    conv.in = r;
-    rc = conv.out;
-
-    return (lc < rc) ? -1 : (lc > rc ? 1 : 0);
-
+   
     if (l.type == DQNone && r.type == DQNone) {
         return 0;
     }
 
     if (l.type == DQString && r.type ==DQString) {
-        return strcmp(l.key.data.str.ptr, r.key.data.str.ptr);
+        unsigned long sl1 = strlen(l.key.data.str.ptr);
+        unsigned long sl2 = strlen(r.key.data.str.ptr);
+        if (sl1 != sl2) {
+            return (sl1 < sl2) ? -1 : 1;
+        }
+
+        char* lc = l.key.data.str.ptr;
+        char* rc = r.key.data.str.ptr;
+        for (; 1; ++lc, ++rc) {
+            if (!*lc && !*rc) {
+                return 0;
+            }
+            if (*lc != *rc) {
+                return *lc < *rc ? -1 : 1;
+            }
+        }
+
+        return 0;
     }
 
     if (l.type == DQList && r.type == DQList) {
@@ -372,7 +431,7 @@ static int get_best_attribute(size_t* result, DecisionTable table, int* attribut
             if (!ss) {
                 return 0;
             }
-            if (gain > max_gain) {
+            if (gain > max_gain || i == 0) {
                 max_gain = gain;
                 best_attr_now = i;
             }
@@ -384,6 +443,7 @@ static int get_best_attribute(size_t* result, DecisionTable table, int* attribut
 }
 
 TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
+                                  int* numericAttributes,
                                   size_t nr_attr, size_t depth,
                                   size_t target_attribute,
                                   char* parent_text, TextTreeNode* parent) {
@@ -553,7 +613,7 @@ free(newNode.node_text);
     for (size_t i = 0; i < table.nr_rows; ++i) {
 
         if (i == 0 || !data_queries_equal(currentValue, bestAttrValues[i])) {
-            DecisionTable subdata = get_filtered_table(table, best_attr, currentValue);
+            DecisionTable subdata = get_filtered_table(table, best_attr, bestAttrValues[i]);
 
             if (subdata.titles == NULL) {
                 free(newNodeChildren);
@@ -644,7 +704,7 @@ free(newNode.node_text);
             } else {
 
                 DataQueryKey newStrPtr;
-                int scss = convertToStr(&newStrPtr, currentValue, 0);
+                int scss = convertToStr(&newStrPtr, bestAttrValues[i], 0);
 
                 if (!scss) {
                     free(newNodeChildren);
@@ -655,21 +715,19 @@ free(newNode.node_text);
                 }
 
                 TextTreeNode* node = &newNodeChildren[nrNewChildren];
+                if (!attributes[best_attr])
+                    ++nr_attr;
                 attributes[best_attr] = 1;
-                ++nr_attr;
-
-
-
-                
-                
-                *node = build_decision_tree(subdata, attributes, nr_attr, depth-1, target_attribute, newStrPtr.key.data.str.ptr, &newNode);
                 
 
                 
+                *node = build_decision_tree(subdata, attributes, numericAttributes,
+                    nr_attr, depth-1, target_attribute,
+                    newStrPtr.key.data.str.ptr, &newNode);
+                
 
-
-                --nr_attr;
-                attributes[best_attr] = 0;
+                /*--nr_attr;
+                attributes[best_attr] = 0;*/
                 ++nrNewChildren;
             }
             currentValue = bestAttrValues[i];
@@ -677,62 +735,32 @@ free(newNode.node_text);
         }
     }
 
-    if (nrNewChildren) {
+    if (nrNewChildren > 1) {
         newNode.children = newNodeChildren;
         newNode.nr_children = nrNewChildren;
-    } else {
+        newNode.parent_text = parent_text;
+        newNode.parent = parent;
+        free(bestAttrValues);
+    }
+
+    else if (nrNewChildren == 0) {
         free(newNodeChildren);
+        free(bestAttrValues);
+        newNode.parent = parent;
+        newNode.parent_text = parent_text;
     }
-    newNode.parent_text = parent_text;
-    newNode.parent = parent;
 
-    free(bestAttrValues);
+    else if (nrNewChildren == 1) {
+        newNode.children = newNodeChildren;
+        newNode.nr_children = nrNewChildren;
+        free(bestAttrValues);
+        free(newNode.node_text);
+        newNode = newNode.children[0];
+        free(newNode.parent_text);
+        newNode.parent_text = parent_text;
+        newNode.parent = parent;
+        free(newNodeChildren);
+
+    }
     return newNode;
-}
-
-
-
-
-
-
-static int data_queries_equal(DataQueryKey left, DataQueryKey right) {
-    if (left.type != right.type) {
-        return 0;
-    }
-
-    if (left.type == DQInt) {
-        return left.key.data.integ == right.key.data.integ;
-    }
-
-    if (left.type == DQReal) {
-        return left.key.data.real == right.key.data.real;
-    }
-
-    if (left.type == DQString) {
-        return left.key.data.str.n == right.key.data.str.n &&
-            strcmp(left.key.data.str.ptr, right.key.data.str.ptr) == 0;
-    }
-
-    if (left.type == DQKeyword) {
-        return left.key.word == right.key.word;
-    }
-
-    if (left.type == DQNone) {
-        return 1;
-    }
-
-    if (left.type == DQList) {
-        if (left.key.data.list.n != right.key.data.list.n) {
-            return 0;
-        }
-
-        for (size_t i = 0; i < left.key.data.list.n; ++i) {
-            if (!data_queries_equal(left.key.data.list.root[i],right.key.data.list.root[i])) {
-                return 0;
-            }
-        }
-        return 1;
-    }
-
-    return 1;
 }

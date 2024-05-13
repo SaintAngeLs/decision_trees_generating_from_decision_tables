@@ -33,6 +33,7 @@ typedef enum DataQueryKeyword_ {
         DQK_count,
         DQK_avg,
         DQK_union,
+        DQK_distinct
     } DataQueryKeyword;
 
 typedef union DataImpl_ {

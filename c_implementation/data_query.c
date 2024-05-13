@@ -1,4 +1,6 @@
 #include "data_query.h"
+#include "build_decision_tree.h"
+#include "heap_sort.h"
 #include "string_tree.h"
 #include <stdint.h>
 #include <stdlib.h>
@@ -10,6 +12,7 @@
 static int convertToInt(DataQueryKey* dst, DataQueryKey data, size_t lvl);
 static int convertToReal(DataQueryKey* dst, DataQueryKey data, size_t lvl);
 
+static int create_distinct(DataQueryKey* dst, DataQueryKey data, size_t lvl);
 static int create_union(DataQueryKey* dst, DataQueryKey data, size_t lvl);
 static int calculate_avg(DataQueryKey* dst, DataQueryKey data, size_t lvl);
 static int calculate_sum(DataQueryKey* dst, DataQueryKey data, size_t lvl);
@@ -259,6 +262,15 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
         if (!(stackp+1-execStack)) { data_query_exit(execStack, stackp, treeStack); return none; }
         DataQueryKey r;
         int sccdd = create_union(&r, *stackp, lvl);
+        if (!sccdd) { freeKey(&r); data_query_exit(execStack, stackp, treeStack); return none; }
+        freeKey(stackp);
+        *stackp = r;
+        break;
+      }
+      case DQK_distinct: {
+        if (!(stackp+1-execStack)) { data_query_exit(execStack, stackp, treeStack); return none; }
+        DataQueryKey r;
+        int sccdd = create_distinct(&r, *stackp, lvl);
         if (!sccdd) { freeKey(&r); data_query_exit(execStack, stackp, treeStack); return none; }
         freeKey(stackp);
         *stackp = r;
@@ -598,6 +610,91 @@ int convertToStr(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   }
 
   return 0;
+}
+
+static int create_distinct(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
+  if (lvl) {
+    DataQueryKey* datap = data.key.data.list.root;
+
+    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    if (!dstarr) {
+      return 0;
+    }
+
+    DataQueryKey* dstp = dstarr;
+    for (size_t i = data.key.data.list.n; i; --i, ++datap, ++dstp) {
+      if (!create_distinct(dstp, *datap, lvl-1)) {
+        freeKeys(dstarr, data.key.data.list.n, 1);
+        free(dstarr);
+        return 0;
+      }
+    }
+
+    dst->key.data.list.root = dstarr;
+    dst->key.data.list.n = data.key.data.list.n;
+    dst->type = DQList;
+    return 1;
+  }
+
+  if (data.type != DQList) {
+    return 0;
+  }
+
+  DataQueryKey newList;
+  newList.type = DQList;
+  
+  DataQueryKey sortedDst;
+  sortedDst = copyKeyStructure(data);
+  if (sortedDst.type == DQNone) {
+    return 0;
+  }
+
+  heapsort(sortedDst.key.data.list.root,
+           sizeof(DataQueryKey),
+           sortedDst.key.data.list.n,
+           compare_dqks_ptr_);
+
+  DataQueryKey currentValue = sortedDst.key.data.list.root[0];
+
+  size_t dsct_n = 0; 
+
+  for (size_t i = 0; i < sortedDst.key.data.list.n; ++i) {
+    if (i == 0 ||
+        !data_queries_equal(currentValue, sortedDst.key.data.list.root[i])) {
+        ++dsct_n;
+        currentValue = sortedDst.key.data.list.root[i];
+    }
+  }
+
+  newList.key.data.list.root = calloc(dsct_n, sizeof(DataQueryKey));
+  newList.key.data.list.n = dsct_n;
+
+  if (!newList.key.data.list.root) {
+    freeKey(&sortedDst);
+    return 0;
+  }
+
+  currentValue = sortedDst.key.data.list.root[0];
+
+  size_t curr_i = 0;
+
+  for (size_t i = 0; i < sortedDst.key.data.list.n; ++i) {
+    if (i == 0 ||
+        !data_queries_equal(currentValue, sortedDst.key.data.list.root[i])) {
+        newList.key.data.list.root[i] = copyKeyStructure(sortedDst.key.data.list.root[i]);
+        if (newList.key.data.list.root[i].type == DQNone) {
+          freeKey(&sortedDst);
+          freeKeys(newList.key.data.list.root, dsct_n, 1);
+          return 0;
+        }
+        ++curr_i;
+        currentValue = sortedDst.key.data.list.root[i];
+    }
+  }
+
+  freeKey(&sortedDst);
+  *dst = newList;
+  return 1;
 }
 
 static int create_union(DataQueryKey* dst, DataQueryKey data, size_t lvl) {

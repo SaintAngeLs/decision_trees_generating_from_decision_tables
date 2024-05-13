@@ -67,6 +67,7 @@ void func1() {
 		(DataQueryKey){DQK_fetch, DQKeyword},
 		(DataQueryKey){1, DQInt},
 		(DataQueryKey){DQK_changeLvl, DQKeyword},
+		(DataQueryKey){DQK_distinct, DQKeyword},
 		(DataQueryKey){DQK_toStr, DQKeyword} /*TODO: remove*/
 	};
 
@@ -216,10 +217,10 @@ void func1() {
 
 	size_t* instr_sizes_cases[4];
 
-	size_t instr_size0[] = {10, 16, 10, 10};
+	size_t instr_size0[] = {10, 17, 10, 10};
 	size_t instr_size1[] = {10, 10, 10};
-	size_t instr_size2[] = {16, 10};
-	size_t instr_size3[] = {10, 16, 10, 10, 17, 16, 10};
+	size_t instr_size2[] = {17, 10};
+	size_t instr_size3[] = {10, 17, 10, 10, 17, 16, 10};
 
 	instr_sizes_cases[0] = instr_size0;
 	instr_sizes_cases[1] = instr_size1;
@@ -246,10 +247,21 @@ void func1() {
 	int attr2[] = {0, 1};
 	int attr3[] = {0, 0, 0, 0, 0, 0, 1};
 
+	int* numAttr[4];
+	int numAttr0[] = {1, 0, 1, 1};
+	int numAttr1[] = {0, 0, 1};
+	int numAttr2[] = {0, 0};
+	int numAttr3[] = {1, 0, 0, 0, 0, 0, 1};
+
 	attr[0] = attr0;
 	attr[1] = attr1;
 	attr[2] = attr2;
 	attr[3] = attr3;
+
+	numAttr[0] = numAttr0;
+	numAttr[1] = numAttr1;
+	numAttr[2] = numAttr2;
+	numAttr[3] = numAttr3;
 
 	int tgt_attr[] = {3, 2, 1, 6};
 
@@ -277,7 +289,7 @@ void func1() {
 		print_decision_table(decision_tables[i]);
 
 		TextTreeNode decision_tree = build_decision_tree(decision_tables[i],
-			attr[i], 1, depth[i], tgt_attr[i], NULL, NULL);
+			attr[i], numAttr[i], 1, depth[i], tgt_attr[i], NULL, NULL);
 		
 		if (!decision_tree.node_text) {
 			fprintf(stderr, "No decision tree %d\n", i);

@@ -219,14 +219,14 @@ void* avl_find_impl(void * root, int (*comp)(const void*, const void*), void* el
       assert(elem);
       assert(root);
 
-      if (comp(root, elem) < 0) {
+      if (comp(root, elem) > 0) {
           root = *(void**)(root + left_offset);
       }
       
       /* don't compare nulls! */
       else
       
-      if (comp(root, elem) > 0) {
+      if (comp(root, elem) < 0) {
           root = *(void**)(root + right_offset);
       }
 
