@@ -10,6 +10,7 @@
 #include <SFML/Graphics/Vertex.h>
 #include <SFML/System/Vector2.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <string.h>
 
 void tree_visualization_draw(const TextTreeVisualization* tree, sfRenderWindow* window) {
@@ -49,8 +50,10 @@ static TextTreeNode* first_dfs(TextTreeNode* root) {
 }
 
 static TextTreeNode* next_dfs(TextTreeNode* root) {
+    assert(root);
+
     if (root->nr_children != 0) {
-        return &root->children[0];
+        return root->children;
     }
 
     TextTreeNode* parent = root->parent;
@@ -68,12 +71,16 @@ static TextTreeNode* next_dfs(TextTreeNode* root) {
         }
     }
 
-    return &parent->children[root->parent_index+1];
+    return parent->children + root->parent_index + 1;
 }
 
 static void calc_parent_indices(TextTreeNode* root) {
     for (size_t i = 0; i < root->nr_children; ++i) {
         root->children[i].parent_index = i;
+        
+        /* correct parents */
+        root->children[i].parent = root;
+
         calc_parent_indices(&root->children[i]);
     }
 }
@@ -129,13 +136,13 @@ static void calc_ranges(TextTreeNode* root) {
     root->right = right;
 }
 
- const float node_width = 20;
-    const float node_height = 10;
+ const float node_width = 200;
+    const float node_height = 100;
     const unsigned char_size = 30;
-    const float node_space_width = 30;
-    const float node_space_height = 20;
-    const float node_x_inside = 5;
-    const float node_y_inside = 5;
+    const float node_space_width = 300;
+    const float node_space_height = 200;
+    const float node_x_inside = 50;
+    const float node_y_inside = 50;
 
     const float up_ptr_x = node_x_inside + node_width / 2;
     const float up_ptr_y = node_y_inside;
@@ -148,7 +155,7 @@ static void calc_ranges(TextTreeNode* root) {
 
 
 static void calc_positions(TextTreeNode* root) {
-    float half = (root->right - root->left)/2.f;
+    float half = (root->right + root->left)/2.f;
     float x_space = half * node_space_width;
     float y_space = root->lvl * node_space_height;
 
@@ -216,6 +223,18 @@ static size_t calc_count(TextTreeNode* tree) {
     return 1 + n;
 }
 
+void free_visualization_tree(TextTreeVisualization* tree) {
+    for (size_t i = 0; i < tree->nr_texts; ++i) {
+        sfText_destroy(tree->texts[i]);
+    }
+    for (size_t i = 0; i < tree->nr_nodes; ++i) {
+        sfCircleShape_destroy(tree->nodes[i]);
+    }
+    free(tree->nodes);
+    free(tree->pointers);
+    free(tree->texts);
+}
+
 TextTreeVisualization tree_visualization_create(TextTreeNode* tree, sfFont* font) {
     TextTreeVisualization result;
     memset(&result, 0, sizeof(result));
@@ -239,12 +258,10 @@ TextTreeVisualization tree_visualization_create(TextTreeNode* tree, sfFont* font
     
 
 
-    sfCircleShape** cspp = malloc(sizeof(sfCircleShape*) * n);
+    sfCircleShape** cspp = calloc(n, sizeof(sfCircleShape*));
     if (!cspp) {
         return result;
     }
-    memset(cspp, 0, sizeof(sfCircleShape*) * n);
-
     int success = 1;
     for (size_t i = 0; i < n; ++i) {
         cspp[i] = sfCircleShape_create();
@@ -271,7 +288,7 @@ TextTreeVisualization tree_visualization_create(TextTreeNode* tree, sfFont* font
 
 
 
-    sfText** txtpp = malloc(sizeof(sfText*) * (n + ptrn));
+    sfText** txtpp = calloc(n + ptrn,sizeof(sfText*));
     if (!txtpp) {
         for (size_t i = 0; i < n; ++i) {
             sfCircleShape_destroy(cspp[i]);
@@ -279,9 +296,8 @@ TextTreeVisualization tree_visualization_create(TextTreeNode* tree, sfFont* font
         free(cspp);
         return result;
     }
-    memset(cspp, 0, sizeof(sfText*) * (n + ptrn));
 
-    for (size_t i = 0; i < n; ++i) {
+    for (size_t i = 0; i < n + ptrn; ++i) {
         txtpp[i] = sfText_create();
         if (!txtpp[i]) {
             success = 0;
@@ -301,17 +317,20 @@ TextTreeVisualization tree_visualization_create(TextTreeNode* tree, sfFont* font
     }
 
     sfText** ptr_txtpp = txtpp + n;
+    sfColor black;
+    black.r = black.g = black.b = 0;
+    black.a = 255;
 
     for (size_t i = 0; i < n; ++i) {
-        sfText_setFillColor(txtpp[i], (sfColor){0, 0, 0, 255});
-        sfText_setCharacterSize(txtpp[i], char_size);
         sfText_setFont(txtpp[i], font);
+        sfText_setFillColor(txtpp[i], black);
+        sfText_setCharacterSize(txtpp[i], char_size);
     }
 
     for (size_t i = 0; i < ptrn; ++i) {
-        sfText_setFillColor(ptr_txtpp[i], (sfColor){0, 0, 0, 255});
-        sfText_setCharacterSize(ptr_txtpp[i], char_size / 1.5f);
         sfText_setFont(ptr_txtpp[i], font);
+        sfText_setFillColor(ptr_txtpp[i], black);
+        sfText_setCharacterSize(ptr_txtpp[i], char_size);
     }
 
 
@@ -319,17 +338,18 @@ TextTreeVisualization tree_visualization_create(TextTreeNode* tree, sfFont* font
     size_t i = 0;
     for (TextTreeNode* node = first_dfs(tree); node; ++i, node = next_dfs(node)) {
         sfText_setString(txtpp[i], node->node_text);
-        sfText_setPosition(txtpp[i], (sfVector2f){node->x, node->y});
+        sfText_setPosition(txtpp[i], (sfVector2f){node->text_x, node->text_y});
         sfFloatRect fr = sfText_getGlobalBounds(txtpp[i]);
-        sfText_setOrigin(txtpp[i], (sfVector2f){fr.left + fr.width/2,fr.top+fr.height/2});
+        sfText_setOrigin(txtpp[i], (sfVector2f){fr.width/2,fr.height/2});
+        sfCircleShape_setPosition(cspp[i], (sfVector2f){node->x, node->y});
     }
 
     i = 0;
     for (TextTreeNode* node = next_dfs(first_dfs(tree)); node; ++i, node = next_dfs(node)) {
         sfText_setString(ptr_txtpp[i], node->parent_text);
-        sfText_setPosition(ptr_txtpp[i], (sfVector2f){node->text_x, node->text_y});
+        sfText_setPosition(ptr_txtpp[i], (sfVector2f){node->ptr_text_x, node->ptr_text_y});
         sfFloatRect fr = sfText_getGlobalBounds(ptr_txtpp[i]);
-        sfText_setOrigin(ptr_txtpp[i], (sfVector2f){fr.left + fr.width/2,fr.top+fr.height/2});
+        sfText_setOrigin(ptr_txtpp[i], (sfVector2f){fr.width/2,fr.height/2});
     }
 
     /* pointers */
@@ -350,9 +370,9 @@ TextTreeVisualization tree_visualization_create(TextTreeNode* tree, sfFont* font
 
     i = 0;
     for (TextTreeNode* node = next_dfs(first_dfs(tree)); node; ++i, node = next_dfs(node)) {
-        vcs[i*2].color = (sfColor){0,0,0,255};
+        vcs[i*2].color = black;
         vcs[i*2].position = (sfVector2f){ node->ptr_px, node->ptr_py };
-        vcs[i*2+1].color = (sfColor){0,0,0,255};
+        vcs[i*2+1].color = black;
         vcs[i*2+1].position = (sfVector2f){ node->ptr_x, node->ptr_y };
     }
 

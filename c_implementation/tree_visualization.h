@@ -24,4 +24,6 @@ void tree_visualization_draw(const TextTreeVisualization* tree, sfRenderWindow* 
 /* TODO: unit test */
 TextTreeVisualization tree_visualization_create(TextTreeNode* tree, sfFont* font);
 
+void free_visualization_tree(TextTreeVisualization* tree);
+
 #endif /* MINIML_TREE_VISUALIZATION_H */

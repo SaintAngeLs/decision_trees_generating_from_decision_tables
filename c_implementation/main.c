@@ -8,7 +8,11 @@
 #include "tree_visualization.h"
 #include "tree_visualizer.h"
 #include <SFML/Graphics/Font.h>
+#include <SFML/Graphics/RenderWindow.h>
 #include <SFML/Graphics/Types.h>
+#include <SFML/Window/Window.h>
+#include <SFML/Window/WindowBase.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -325,18 +329,183 @@ void func1() {
 }
 
 void func2() {
+	sfFont* font = sfFont_createFromFile("font.ttf");
+	if (!font) {
+		return;
+	}
 
+	char* raw_contents = get_str_from_file("data/example.json");
+	if (!raw_contents) {
+		sfFont_destroy(font);
+		return;
+	}
+
+	StringTreeNode parsed_tree = read_from_json(raw_contents);
+
+	free(raw_contents);
+	
+	/* is nulled */
+	if (memcmp(&parsed_tree, (unsigned short[sizeof(StringTreeNode)]){0}, sizeof(StringTreeNode)) == 0) {
+		sfFont_destroy(font);
+		return;
+	}
+
+	printStringTree(&parsed_tree, 0);
+
+	/*age 10*/
+	DataQueryKey i0_0[] = {
+		(DataQueryKey){0, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){0, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){1, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){DQK_foreach, DQKeyword},
+		(DataQueryKey){1, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){DQK_fetch, DQKeyword}
+	};
+
+	/*states*/
+	DataQueryKey i0_1[] = {
+		(DataQueryKey){0, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){0, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){1, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){DQK_foreach, DQKeyword},
+		(DataQueryKey){5, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){DQK_foreach, DQKeyword},
+		(DataQueryKey){3, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){DQK_fetch, DQKeyword},
+		(DataQueryKey){1, DQInt},
+		(DataQueryKey){DQK_changeLvl, DQKeyword},
+		(DataQueryKey){DQK_distinct, DQKeyword},
+		(DataQueryKey){DQK_toStr, DQKeyword} /*TODO: remove*/
+	};
+
+	/*NR children*/
+	DataQueryKey i0_2[] = {
+		(DataQueryKey){0, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){0, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){1, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){DQK_foreach, DQKeyword},
+		(DataQueryKey){6, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){DQK_fetch, DQKeyword}
+	};
+
+	/*salary*/
+	DataQueryKey i0_3[] = {
+		(DataQueryKey){0, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){0, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){1, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){DQK_foreach, DQKeyword},
+		(DataQueryKey){7, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){DQK_fetch, DQKeyword}
+	};
+
+	/*marital status*/
+	DataQueryKey i1_0[] = {
+		(DataQueryKey){0, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){0, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){1, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){DQK_foreach, DQKeyword},
+		(DataQueryKey){3, DQInt},
+		(DataQueryKey){DQK_propId, DQKeyword},
+		(DataQueryKey){DQK_fetch, DQKeyword}
+	};
+
+	/*NR children 10*/
+	DataQueryKey* i1_1 = i0_2;
+
+	/*salary 10*/
+	DataQueryKey* i1_2 = i0_3;
+
+	DataQueryKey* instr_attr1[3];
+	instr_attr1[0] = i1_0;
+	instr_attr1[1] = i1_1;
+	instr_attr1[2] = i1_2;
+
+	char* titles_1[] = { "Marital status", "Children", "Salary" };
+
+	size_t instr_size1[] = {10, 10, 10};
+
+	DecisionTable decision_table = create_decision_table_from_parsed_tree(parsed_tree,
+	 titles_1, instr_attr1,
+			instr_size1, 3);
+
+	free_string_tree_children(parsed_tree);
+
+		if (!decision_table.titles) {
+			sfFont_destroy(font);
+			return;
+		}
+
+		print_decision_table(decision_table);
+
+		int attr1[] = {0, 0, 1};
+		int numAttr1[] = {0, 0, 1};
+
+		TextTreeNode decision_tree = build_decision_tree(decision_table,
+			attr1, numAttr1, 1, 2, 2, NULL, NULL);
+		
+		if (!decision_tree.node_text) {
+			fprintf(stderr, "No decision tree\n");
+			free_decision_table(decision_table, 0);
+			sfFont_destroy(font);
+			return;
+		}
+
+		print_decision_tree(decision_tree, 0);
+
+		TextTreeVisualization viz = tree_visualization_create(&decision_tree, font);
+		if (!memcmp(&viz, &(TextTreeVisualization){0}, sizeof(TextTreeVisualization))) {
+			fprintf(stderr, "Failed to create tree visualization\n");
+			free_text_tree(decision_tree);
+			free_decision_table(decision_table, 0);
+			sfFont_destroy(font);
+			return;
+		}
+
+		visualize_tree(&viz);
+
+	free_visualization_tree(&viz);
+		free_text_tree(decision_tree);
+		free_decision_table(decision_table, 0);	
+	sfFont_destroy(font);
+	return;
 }
 
 void func3() {
 
 }
 
-int main() {
-
-	func1();
-	func2();
-	func3();
-
+int main(int argc, char** args) {
+	if (argc > 1) {
+		if (args[1][0] == '1') {
+			func1();
+		} else if (args[1][0] == '2') {
+			func2();
+		} else if (args[1][0] == '3') {
+			func3();
+		}
+	}
+	else {
+		fprintf(stderr, "Usage: n\nn - nr of test function\n");
+	}
 	return EXIT_SUCCESS;
 }

@@ -139,7 +139,7 @@ void visualize_tree(TextTreeVisualization* tree) {
                 destroy_handles(handles);
                 return;
             }
-            sfView_move(view, (sfVector2f){0, mov_elapsed.microseconds});
+            sfView_move(view, (sfVector2f){0, -mov_elapsed.microseconds/1000.f});
             sfRenderWindow_setView(window, view);
             sfView_destroy(view);
         }
@@ -149,7 +149,7 @@ void visualize_tree(TextTreeVisualization* tree) {
                 destroy_handles(handles);
                 return;
             }
-            sfView_move(view, (sfVector2f){mov_elapsed.microseconds, 0});
+            sfView_move(view, (sfVector2f){-mov_elapsed.microseconds/1000.f, 0});
             sfRenderWindow_setView(window, view);
             sfView_destroy(view);
         }
@@ -159,7 +159,7 @@ void visualize_tree(TextTreeVisualization* tree) {
                 destroy_handles(handles);
                 return;
             }
-            sfView_move(view, (sfVector2f){0, -mov_elapsed.microseconds});
+            sfView_move(view, (sfVector2f){0, mov_elapsed.microseconds/1000.f});
             sfRenderWindow_setView(window, view);
             sfView_destroy(view);
         }
@@ -169,7 +169,7 @@ void visualize_tree(TextTreeVisualization* tree) {
                 destroy_handles(handles);
                 return;
             }
-            sfView_move(view, (sfVector2f){-mov_elapsed.microseconds, 0});
+            sfView_move(view, (sfVector2f){mov_elapsed.microseconds/1000.f, 0});
             sfRenderWindow_setView(window, view);
             sfView_destroy(view);
         }
