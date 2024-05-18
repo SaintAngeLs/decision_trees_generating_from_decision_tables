@@ -1,12 +1,16 @@
 package dtree
 
 import (
-	"golang/utils"
+	"golang/utils/imp"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
 func TestTreeStructure3(t *testing.T) {
-	data := utils.ReadCsvFile("/Users/dima/mini_ml/golang/data/data3.csv")
+	path, _ := os.Getwd()
+	parentPath := filepath.Dir(path)
+	data := imp.ReadCsvFile(parentPath + "/data/data3.csv")
 	attributes := []string{"name", "age", "gender", "minor", "children", "salary"}
 	targetAttribute := "maritalStatus"
 	tree := BuildDecisionTree(data, attributes, targetAttribute)

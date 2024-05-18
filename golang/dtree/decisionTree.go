@@ -1,14 +1,15 @@
 package dtree
 
 import (
+	"errors"
 	"math"
 )
 
 type DecisionNode struct {
-	Attribute string
-	IsLeaf    bool
-	Decision  string
-	Children  map[string]DecisionNode
+	Attribute string                  `json:"attribute"`
+	IsLeaf    bool                    `json:"is_leaf"`
+	Decision  string                  `json:"decision"`
+	Children  map[string]DecisionNode `json:"children"`
 }
 
 func New(attribute string, isLeaf bool, decision string) DecisionNode {
@@ -154,9 +155,15 @@ func BuildDecisionTree(data []map[string]string, attributes []string, targetAttr
 	return node
 }
 
-//func Classify(tree DecisionNode, sample) {
-//	node := tree
-//	for !node.IsLeaf {
-//
-//	}
-//}
+func Classify(tree DecisionNode, sample map[string]string) (string, error) {
+	node := tree
+	for !node.IsLeaf {
+		attributeValue := sample[node.Attribute]
+
+		if _, ok := node.Children[attributeValue]; !ok {
+			return "", errors.New("unknown attribute value")
+		}
+		node = node.Children[attributeValue]
+	}
+	return node.Decision, nil
+}
