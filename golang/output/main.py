@@ -21,10 +21,10 @@ def visualize_tree(node, graph, parent=None, edge_label=""):
             visualize_tree(child, graph, node_id, str(value))
 
 def main():
-    with open("output/json/complex_decision_tree.json") as f:
+    with open("output/json/comp_decision_tree.json") as f:
         tree = json.load(f)
         graph = Digraph()
         visualize_tree(tree, graph)
-        graph.render("output/complex_decision_tree", format="png", cleanup=True)
+        graph.render("output/comp_decision_tree", format="png", cleanup=True)
 
 main()
