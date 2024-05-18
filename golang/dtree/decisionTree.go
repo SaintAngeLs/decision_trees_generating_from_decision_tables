@@ -1,19 +1,21 @@
 package dtree
 
-import "math"
+import (
+	"math"
+)
 
 type DecisionNode struct {
 	Attribute string
 	IsLeaf    bool
 	Decision  string
-	Children  []DecisionNode
+	Children  map[string]DecisionNode
 }
 
 func New(attribute string, isLeaf bool, decision string) DecisionNode {
 	return DecisionNode{Attribute: attribute,
 		IsLeaf:   isLeaf,
 		Decision: decision,
-		Children: make([]DecisionNode, 0),
+		Children: make(map[string]DecisionNode),
 	}
 }
 
@@ -37,7 +39,11 @@ func informationGain(data []map[string]string, attribute string, targetAttribute
 	for _, row := range data {
 		value := row[attribute]
 		targetValue := row[targetAttribute]
-		valueCounts[value][targetValue] += 1
+		_, ok := valueCounts[value]
+		if !ok {
+			valueCounts[value] = make(map[string]int)
+		}
+		valueCounts[value][targetValue]++
 	}
 
 	// Calculate the entropy of each subset of records weighted by their probability.
@@ -46,16 +52,16 @@ func informationGain(data []map[string]string, attribute string, targetAttribute
 
 	for _, value := range valueCounts {
 		valueEntropy := 0.0
-		totalValueRows := 0
+		totalValueRows := 0.0
 		for _, val := range value {
-			totalValueRows += val
+			totalValueRows += float64(val)
 		}
 
 		for _, outcomeCount := range value {
-			probability := float64(outcomeCount / totalValueRows)
+			probability := float64(outcomeCount) / totalValueRows
 			valueEntropy -= probability * math.Log2(probability)
 		}
-		attributeEntropy += float64(totalValueRows/totalRows) * valueEntropy
+		attributeEntropy += totalValueRows / float64(totalRows) * valueEntropy
 	}
 
 	// Calculate the entropy before the split
@@ -68,7 +74,7 @@ func informationGain(data []map[string]string, attribute string, targetAttribute
 		targetValueCounts[targetValue]++
 	}
 	for _, count := range targetValueCounts {
-		probability := float64(count / totalRows)
+		probability := float64(count) / float64(totalRows)
 		overallEntropy -= probability * math.Log2(probability)
 	}
 
@@ -124,6 +130,33 @@ func BuildDecisionTree(data []map[string]string, attributes []string, targetAttr
 	node := New(bestAttribute, false, "")
 
 	// Split data on the best attribute and recurse
+	attributeValues := make(map[string]bool)
+	for _, row := range data {
+		attributeValues[row[bestAttribute]] = true
+	}
 
+	for value := range attributeValues {
+		subset := make([]map[string]string, 0)
+		for _, row := range data {
+			if row[bestAttribute] == value {
+				subset = append(subset, row)
+			}
+		}
+		newAttributes := make([]string, 0)
+		for _, attribute := range attributes {
+			if attribute != bestAttribute {
+				newAttributes = append(newAttributes, attribute)
+			}
+		}
+		child := BuildDecisionTree(subset, newAttributes, targetAttribute)
+		node.Children[value] = child
+	}
 	return node
 }
+
+//func Classify(tree DecisionNode, sample) {
+//	node := tree
+//	for !node.IsLeaf {
+//
+//	}
+//}
