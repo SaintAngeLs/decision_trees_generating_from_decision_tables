@@ -138,7 +138,7 @@ static void calc_ranges(TextTreeNode* root) {
 
  const float node_width = 200;
     const float node_height = 100;
-    const unsigned char_size = 30;
+    const unsigned char_size = 25;
     const float node_space_width = 300;
     const float node_space_height = 200;
     const float node_x_inside = 50;

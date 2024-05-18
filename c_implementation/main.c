@@ -17,7 +17,7 @@
 #include <string.h>
 
 void func1() {
-	/*sfFont* font = sfFont_createFromFile("font.ttf");
+	/*sfFont* font = sfFont_createFromFile("font.otf");
 	if (!font) {
 		return;
 	}*/
@@ -329,7 +329,7 @@ void func1() {
 }
 
 void func2() {
-	sfFont* font = sfFont_createFromFile("font.ttf");
+	sfFont* font = sfFont_createFromFile("font.otf");
 	if (!font) {
 		return;
 	}
