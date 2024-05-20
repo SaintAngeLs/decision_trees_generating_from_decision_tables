@@ -4,6 +4,7 @@
 #include "data_query.h"
 #include "heap_sort.h"
 #include "text_tree.h"
+#include <float.h>
 #include <math.h>
 #include <stdlib.h>
 #include "xalloc.h"
@@ -68,15 +69,77 @@ int data_queries_equal(DataQueryKey left, DataQueryKey right) {
     return 1;
 }
 
+int is_numerical(DataQueryKey key) {
+    return key.type == DQInt || key.type == DQReal;
+}
+
+int data_queries_less(DataQueryKey left, DataQueryKey right) {
+    if (left.type == DQInt) {
+        return left.key.data.integ < right.key.data.integ;
+    }
+
+    if (left.type == DQReal) {
+        return left.key.data.real < right.key.data.real;
+    }
+
+    return 0;
+}
+
+int data_queries_lesseq(DataQueryKey left, DataQueryKey right) {
+    if (left.type == DQInt) {
+        return left.key.data.integ <= right.key.data.integ;
+    }
+
+    if (left.type == DQReal) {
+        return left.key.data.real <= right.key.data.real;
+    }
+
+    return 0;
+}
+
+DataQueryKey least_numerical_value(DataQueryType type) {
+    DataQueryKey key;
+    
+    if (type == DQInt) {
+        key.type = DQInt;
+        key.key.data.integ = INT_FAST32_MIN;
+    }
+
+    else if (type == DQReal) {
+        key.type = DQReal;
+        key.key.data.real = DBL_MIN;
+    }
+
+    return key;
+}
+
+DataQueryKey greatest_numerical_value(DataQueryType type) {
+    DataQueryKey key;
+    
+    if (type == DQInt) {
+        key.type = DQInt;
+        key.key.data.integ = INT_FAST32_MAX;
+    }
+
+    else if (type == DQReal) {
+        key.type = DQReal;
+        key.key.data.real = DBL_MAX;
+    }
+
+    return key;
+}
+
 /* table 'view', no deep copying */
-static DecisionTable get_filtered_table(DecisionTable table, size_t best_attr, DataQueryKey value) {
+static DecisionTable get_filtered_table(DecisionTable table,int* numericAttributes, size_t best_attr, DataQueryKey smallestValue,
+                                                                               DataQueryKey biggestValue) {
     DecisionTable newTable;
     newTable.titles = table.titles;
     newTable.nr_columns = table.nr_columns;
 
     size_t nrRows = 0;
-    for (size_t i = 0; i < table.nr_rows; ++i) {
-        if (data_queries_equal(value, table.data[i*table.nr_columns+best_attr])) {
+    for (size_t i = 0; i < table.nr_rows; ++i) {        
+        if (data_queries_lesseq(smallestValue, table.data[i*table.nr_columns+best_attr]) && 
+        data_queries_lesseq(table.data[i*table.nr_columns+best_attr], biggestValue)) {
             ++nrRows;
         }
     }
@@ -97,7 +160,8 @@ static DecisionTable get_filtered_table(DecisionTable table, size_t best_attr, D
 
     size_t c = 0;
     for (size_t i = 0; i < table.nr_rows; ++i) {
-        if (data_queries_equal(value, table.data[i*table.nr_columns+best_attr])) {
+        if (data_queries_lesseq(smallestValue, table.data[i*table.nr_columns+best_attr]) && 
+        data_queries_lesseq(table.data[i*table.nr_columns+best_attr], biggestValue)) {
             for (size_t j = 0; j < table.nr_columns; ++j) {
                 newTable.data[c*table.nr_columns+j] = table.data[i*table.nr_columns+j];
             }
@@ -298,17 +362,95 @@ static DataQueryKeyAvlNode2* next_dfs2(DataQueryKeyAvlNode2* root) {
 
 
 
+static int calculate_entropy(double* result, DecisionTable table, size_t target_attribute) {
+    if (table.nr_rows == 0) {
+        *result = 0;
+        return 1;
+    }
+
+    DataQueryKeyAvlNode* avl_target_values_storage = xmalloc(table.nr_rows * sizeof(DataQueryKeyAvlNode), __LINE__, __FILE__);
+    if (!avl_target_values_storage) {
+        return 0;
+    }
+
+    memset(avl_target_values_storage, 0, table.nr_rows * sizeof(DataQueryKeyAvlNode));
+
+    DataQueryKeyAvlNode* avl_tgt_val_storage_p = avl_target_values_storage;
+
+    DataQueryKeyAvlNode2* avl = NULL;
+    DataQueryKeyAvlNode* avl_tgt = NULL;
+
+    /* "Calculate the entropy before the split" */
+
+    double overall_entropy = 0;
+    for (size_t i = 0; i < table.nr_rows; ++i) {
+        DataQueryKey value_tgt = table.data[i*table.nr_columns + target_attribute];
+        DataQueryKeyAvlNode* f2 = avl_find(avl_tgt, value_tgt, compare_dqks);
+        if (!f2) {
+            DataQueryKeyAvlNode* newf2 = avl_tgt_val_storage_p;
+            avl_tgt = avl_insert(avl_tgt, value_tgt,
+             avl_tgt_val_storage_p, compare_dqks);
+             assert(newf2);
+            ++avl_tgt_val_storage_p;
+            f2 = newf2;
+            f2->nr = 0;
+            assert(avl_tgt);
+        }
+        ++f2->nr;
+    }
+
+    for (DataQueryKeyAvlNode* n2 = first_dfs(avl_tgt); n2; n2 = next_dfs(n2)) {
+        double prob = (double) n2->nr / table.nr_rows;
+        overall_entropy -= prob * log2(prob); 
+    }
+
+    free(avl_target_values_storage);
+    *result = overall_entropy;
+    return 1;
+}
+
+static int information_gain_for_split(double* result, DecisionTable data, DecisionTable left, DecisionTable right,
+        size_t target_attribute) {
+
+    size_t total_len = data.nr_rows;
+    double left_prob = (double)left.nr_rows / total_len;
+    double right_prob = (double)right.nr_rows / total_len;
+    
+    double calcentr1, calcentr2, calcentr3;
+    if (!calculate_entropy(&calcentr1, data, target_attribute))
+        return 0;
+    if (!calculate_entropy(&calcentr2, left, target_attribute))
+        return 0;
+    if (!calculate_entropy(&calcentr3, right, target_attribute))
+        return 0;
+    *result = calcentr1 - (left_prob * calcentr2 + right_prob * calcentr3);
+    return 1;
+}
 
 
 
 
+static size_t table_attr;
+static int num_sort(const void* left, const void* right) {
+    DataQueryKey* l = left;
+    DataQueryKey* r = right;
+    return compare_dqks_(l[table_attr], r[table_attr]);
+}
+
+static int information_gain(double* result, DecisionTable table,int* numericAttributes, size_t attr, size_t target_attribute,
+DataQueryKey* numericalSplitValue) {
+    if (numericAttributes[attr]) {
+
+        table_attr = target_attribute;
+        heapsort(table.data, sizeof(DataQueryKey) * table.nr_columns,
+            table.nr_rows, num_sort);
+
+        /* TODO */
+
+    } else {
 
 
 
-
-
-
-static int information_gain(double* result, DecisionTable table, size_t attr, size_t target_attribute) {
     double attribute_entropy = 0;
 
     DataQueryKeyAvlNode* avl_values_storage = xmalloc(table.nr_rows * sizeof(DataQueryKeyAvlNode), __LINE__, __FILE__);
@@ -417,24 +559,28 @@ static int information_gain(double* result, DecisionTable table, size_t attr, si
     free(avl_values_storage2);
     *result = overall_entropy - attribute_entropy;
     return 1;
+    }
+    return 0;
 }
 
-static int get_best_attribute(size_t* result, DecisionTable table, int* attributes,
-                                  size_t nr_attr, size_t tgt_attr) {
+static int get_best_attribute(size_t* result, DecisionTable table, int* numericAttributes, int* attributes,
+                                  size_t nr_attr, size_t tgt_attr, DataQueryKey* numericalSplitValue) {
 
     double max_gain = 0;
     size_t best_attr_now = 0;
+    DataQueryKey currNumericalSplitValue;
 
     for (size_t i = 0; i < table.nr_columns; ++i) {
         if (!attributes[i]) {
             double gain;
-            int ss = information_gain(&gain, table, i, tgt_attr);
+            int ss = information_gain(&gain, table,numericAttributes, i, tgt_attr, &currNumericalSplitValue);
             if (!ss) {
                 return 0;
             }
             if (gain > max_gain || i == 0) {
                 max_gain = gain;
                 best_attr_now = i;
+                *numericalSplitValue = currNumericalSplitValue;
             }
         }
     }
@@ -570,7 +716,9 @@ TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
     }
 
     size_t best_attr;
-    int ss = get_best_attribute(&best_attr, table, attributes, nr_attr, target_attribute);
+    DataQueryKey numericalSplitValue;
+    int ss = get_best_attribute(&best_attr, table, numericAttributes,attributes, nr_attr, target_attribute,
+        &numericalSplitValue);
 
     if (!ss) {
         return none;
@@ -586,37 +734,43 @@ TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
     newNode.node_text[strlen(table.titles[best_attr])] = 0;
     strncpy(newNode.node_text, table.titles[best_attr], strlen(table.titles[best_attr]));
 
-    DataQueryKey* bestAttrValues = xmalloc(table.nr_rows*sizeof(DataQueryKey), __LINE__, __FILE__);
-    if (!bestAttrValues) {
-        free(newNode.node_text);
-        return none;
-    }
+    
 
-    for (size_t i = 0; i < table.nr_rows; ++i) {
-        bestAttrValues[i] = table.data[i*table.nr_columns+best_attr];
-    }
+    if (!numericAttributes[best_attr]) {
+        DataQueryKey* bestAttrValues = NULL;
 
-    heapsort(bestAttrValues, sizeof(DataQueryKey), table.nr_rows, compare_dqks_ptr_);
+        bestAttrValues = xmalloc(table.nr_rows*sizeof(DataQueryKey), __LINE__, __FILE__);
+        if (!bestAttrValues) {
+            free(newNode.node_text);
+            return none;
+        }
 
-     
+        for (size_t i = 0; i < table.nr_rows; ++i) {
+            bestAttrValues[i] = table.data[i*table.nr_columns+best_attr];
+        }
 
-    DataQueryKey currentValue = bestAttrValues[0];
+        heapsort(bestAttrValues, sizeof(DataQueryKey), table.nr_rows, compare_dqks_ptr_);
 
-    TextTreeNode* newNodeChildren = xmalloc(sizeof(TextTreeNode) * table.nr_rows, __LINE__, __FILE__);
-    if (!newNodeChildren) {
+        
 
-        free(bestAttrValues);
-free(newNode.node_text);
-        return none;
+        DataQueryKey currentValue = bestAttrValues[0];
 
-    }
-    memset(newNodeChildren, 0, sizeof(TextTreeNode) * table.nr_rows);
-    size_t nrNewChildren = 0;
+        TextTreeNode* newNodeChildren = xmalloc(sizeof(TextTreeNode) * table.nr_rows, __LINE__, __FILE__);
+        if (!newNodeChildren) {
 
-    for (size_t i = 0; i < table.nr_rows; ++i) {
+            free(bestAttrValues);
+            free(newNode.node_text);
+            return none;
+
+        }
+        memset(newNodeChildren, 0, sizeof(TextTreeNode) * table.nr_rows);
+        size_t nrNewChildren = 0;
+
+        for (size_t i = 0; i < table.nr_rows; ++i) {
 
         if (i == 0 || !data_queries_equal(currentValue, bestAttrValues[i])) {
-            DecisionTable subdata = get_filtered_table(table, best_attr, bestAttrValues[i]);
+            DecisionTable subdata = get_filtered_table(table, numericAttributes, best_attr, bestAttrValues[i],
+            bestAttrValues[i]);
 
             if (subdata.titles == NULL || subdata.data == NULL) {
                 for (size_t j = 0; j < table.nr_rows; ++j) {
@@ -765,35 +919,232 @@ free(newNode.node_text);
         }
     }
 
-    if (nrNewChildren > 1) {
-        newNode.children = newNodeChildren;
-        newNode.nr_children = nrNewChildren;
-        newNode.parent_text = parent_text;
-        newNode.parent = parent;
-        free(bestAttrValues);
-    }
+        if (nrNewChildren > 1) {
+            newNode.children = newNodeChildren;
+            newNode.nr_children = nrNewChildren;
+            newNode.parent_text = parent_text;
+            newNode.parent = parent;
+            free(bestAttrValues);
+        }
 
-    else if (nrNewChildren == 0) {
-        for (size_t j = 0; j < table.nr_rows; ++j) {
+        else if (nrNewChildren == 0) {
+            for (size_t j = 0; j < table.nr_rows; ++j) {
+                            free_text_tree(newNodeChildren[j]);
+                        }
+            free(newNodeChildren);
+            free(bestAttrValues);
+            newNode.parent = parent;
+            newNode.parent_text = parent_text;
+        }
+
+        else if (nrNewChildren == 1) {
+            newNode.children = newNodeChildren;
+            newNode.nr_children = nrNewChildren;
+            free(bestAttrValues);
+            free(newNode.node_text);
+            newNode = newNode.children[0];
+            free(newNode.parent_text);
+            newNode.parent_text = parent_text;
+            newNode.parent = parent;
+            free(newNodeChildren);
+
+        }
+        return newNode;
+
+
+    } else {
+        
+        TextTreeNode* newNodeChildren = xmalloc(sizeof(TextTreeNode) * 2, __LINE__, __FILE__);
+        if (!newNodeChildren) {
+
+            free(newNode.node_text);
+            return none;
+
+        }
+        memset(newNodeChildren, 0, sizeof(TextTreeNode) * 2);
+        size_t nrNewChildren = 0;
+
+        for (size_t i = 0; i < 2; ++i) {
+
+        if (1) {
+            DecisionTable subdata = get_filtered_table(table, numericAttributes, best_attr, i == 0 ?
+                least_numerical_value(numericalSplitValue.type) : 
+                numericalSplitValue, i == 0 ? numericalSplitValue :
+                greatest_numerical_value(numericalSplitValue.type));
+
+            if (subdata.titles == NULL || subdata.data == NULL) {
+                for (size_t j = 0; j < table.nr_rows; ++j) {
+                    free_text_tree(newNodeChildren[j]);
+                }
+                free(newNodeChildren);
+                free(newNode.node_text);
+                return none;
+            }
+
+            if (subdata.nr_rows == 0) {
+
+                TextTreeNode* node = &newNodeChildren[nrNewChildren];
+
+                /* the simplest way to calculate mode element */
+                int* modeArr = xmalloc(table.nr_rows * sizeof(int), __LINE__, __FILE__);
+                if (!modeArr) {
+                    for (size_t j = 0; j < table.nr_rows; ++j) {
                         free_text_tree(newNodeChildren[j]);
                     }
-        free(newNodeChildren);
-        free(bestAttrValues);
-        newNode.parent = parent;
-        newNode.parent_text = parent_text;
+                    free(newNodeChildren);
+                    free_filtered_table(subdata);
+                        free(newNode.node_text);
+                    return none;
+                }
+                memset(modeArr, 0, sizeof(int) * table.nr_rows);
+
+                DataQueryKey maxNowKey;
+                size_t max_count = 0;
+                size_t all_count = 0;
+                while (all_count != table.nr_rows) {
+                    size_t count = 0;
+                    size_t idx = 0;
+                    while (modeArr[idx]) ++idx;
+                    DataQueryKey nowKey = table.data[idx*table.nr_columns+target_attribute];
+                    ++count;
+                    ++all_count;
+                    modeArr[idx] = 1;
+                    while (idx != table.nr_rows) {
+                        if (!modeArr[idx] &&
+                            data_queries_equal(nowKey, table.data[idx * table.nr_columns+target_attribute])) {
+                            modeArr[idx] = 1;
+                            ++count;
+                            ++all_count;
+                        }
+                        ++idx;
+                    }
+                    if (max_count < count) {
+                        max_count = count;
+                        maxNowKey = nowKey;
+                    }
+                }
+
+                free(modeArr);
+
+            DataQueryKey dominantClass = maxNowKey;
+            DataQueryKey strCvt;
+            int scss = convertToStr(&strCvt, dominantClass, 0);
+            
+            if (!scss) {
+                for (size_t j = 0; j < table.nr_rows; ++j) {
+                        free_text_tree(newNodeChildren[j]);
+                    }
+                free(newNodeChildren);
+                free_filtered_table(subdata);
+                    free(newNode.node_text);
+                return none;
+            }
+
+            node->node_text = xmalloc(strCvt.key.data.str.n+1, __LINE__, __FILE__);
+            if (!node->node_text) {
+                for (size_t j = 0; j < table.nr_rows; ++j) {
+                        free_text_tree(newNodeChildren[j]);
+                    }
+                free(newNodeChildren);
+                free_filtered_table(subdata);
+                    free(newNode.node_text);
+                freeKey(&strCvt);
+                return none;
+            }
+
+            strncpy(node->node_text, strCvt.key.data.str.ptr, strCvt.key.data.str.n);
+            node->node_text[strCvt.key.data.str.n] = 0;
+
+            freeKey(&strCvt);
+
+            node->parent_text = parent_text;
+            node->parent = parent;
+            node->children = NULL;
+            node->nr_children = 0;
+            
+            /*node*/
+
+            ++nrNewChildren;
+
+            } else {
+
+                DataQueryKey newStrPtr;
+                int scss = convertToStr(&newStrPtr, numericalSplitValue, 0);
+
+                if (!scss) {
+                    for (size_t j = 0; j < table.nr_rows; ++j) {
+                        free_text_tree(newNodeChildren[j]);
+                    }
+                    free(newNodeChildren);
+                    free_filtered_table(subdata);
+                    free(newNode.node_text);
+                    return none;
+                }
+
+                TextTreeNode* node = &newNodeChildren[nrNewChildren];
+                if (!attributes[best_attr])
+                    ++nr_attr;
+                attributes[best_attr] = 1;
+                
+
+                
+                *node = build_decision_tree(subdata, attributes, numericAttributes,
+                    nr_attr, depth-1, target_attribute,
+                    newStrPtr.key.data.str.ptr, &newNode);
+
+                if (!node->nr_children && !node->node_text && !node->children) {
+                    freeKey(&newStrPtr);
+                    for (size_t j = 0; j < table.nr_rows; ++j) {
+                        free_text_tree(newNodeChildren[j]);
+                    }
+                    free(newNodeChildren);
+                    free_filtered_table(subdata);
+                    free(newNode.node_text);
+                    return none;
+                }
+                
+
+                /*--nr_attr;
+                attributes[best_attr] = 0;*/
+                ++nrNewChildren;
+            }
+            free_filtered_table(subdata);
+        }
     }
 
-    else if (nrNewChildren == 1) {
-        newNode.children = newNodeChildren;
-        newNode.nr_children = nrNewChildren;
-        free(bestAttrValues);
-        free(newNode.node_text);
-        newNode = newNode.children[0];
-        free(newNode.parent_text);
-        newNode.parent_text = parent_text;
-        newNode.parent = parent;
-        free(newNodeChildren);
+        if (nrNewChildren > 1) {
+            newNode.children = newNodeChildren;
+            newNode.nr_children = nrNewChildren;
+            newNode.parent_text = parent_text;
+            newNode.parent = parent;
+        }
+
+        else if (nrNewChildren == 0) {
+            for (size_t j = 0; j < table.nr_rows; ++j) {
+                            free_text_tree(newNodeChildren[j]);
+                        }
+            free(newNodeChildren);
+            newNode.parent = parent;
+            newNode.parent_text = parent_text;
+        }
+
+        else if (nrNewChildren == 1) {
+            newNode.children = newNodeChildren;
+            newNode.nr_children = nrNewChildren;
+            free(newNode.node_text);
+            newNode = newNode.children[0];
+            free(newNode.parent_text);
+            newNode.parent_text = parent_text;
+            newNode.parent = parent;
+            free(newNodeChildren);
+
+        }
+        return newNode;
+
 
     }
+
+    
     return newNode;
+    
 }
