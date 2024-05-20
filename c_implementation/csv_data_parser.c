@@ -1,6 +1,7 @@
 #include "csv_data_parser.h"
 #include <stdlib.h>
 #include <string.h>
+#include "xalloc.h"
 
 int is_row_separator(char c) {
     return c == ';' || c == '\n' || c == '\r' || c == '\0';
@@ -57,7 +58,7 @@ CsvData read_from_csv(char* str) {
     }
 
     data.data_capacity = data.nr_rows * data.nr_columns;
-    data.data = malloc(data.data_capacity * sizeof(char*));
+    data.data = xmalloc(data.data_capacity * sizeof(char*), __LINE__, __FILE__);
 
     if (!data.data) {
         memset(&data, 0, sizeof(data));
@@ -73,7 +74,7 @@ CsvData read_from_csv(char* str) {
     while (*b != ',' && !is_row_separator(*b)) {
         ++b;
     }
-    data.data[0] = malloc(b-a+1);
+    data.data[0] = xmalloc(b-a+1, __LINE__, __FILE__);
     if (!data.data[0]) {
         free(data.data);
         memset(&data, 0, sizeof(data));
@@ -99,7 +100,7 @@ CsvData read_from_csv(char* str) {
             }
         }
 
-        data.data[nr_toks] = malloc(b-a+1);
+        data.data[nr_toks] = xmalloc(b-a+1, __LINE__, __FILE__);
         if (!data.data[nr_toks]) {
             for (int i = 0; i < nr_toks; ++i) {
                 free(data.data[i]);

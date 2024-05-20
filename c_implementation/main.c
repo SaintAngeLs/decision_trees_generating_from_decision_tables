@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "xalloc.h"
 
 void func1() {
 	/*sfFont* font = sfFont_createFromFile("font.otf");
@@ -471,6 +472,8 @@ void func2() {
 		}
 
 		print_decision_tree(decision_tree, 0);
+
+		enable_forking_allocation = 0;
 
 		TextTreeVisualization viz = tree_visualization_create(&decision_tree, font);
 		if (!memcmp(&viz, &(TextTreeVisualization){0}, sizeof(TextTreeVisualization))) {

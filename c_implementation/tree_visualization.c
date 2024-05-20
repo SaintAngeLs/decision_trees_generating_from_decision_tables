@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include "xalloc.h"
 
 void tree_visualization_draw(const TextTreeVisualization* tree, sfRenderWindow* window) {
     /*draw pointers*/
@@ -258,8 +259,9 @@ TextTreeVisualization tree_visualization_create(TextTreeNode* tree, sfFont* font
     
 
 
-    sfCircleShape** cspp = calloc(n, sizeof(sfCircleShape*));
+    sfCircleShape** cspp = xcalloc(n, sizeof(sfCircleShape*), __LINE__, __FILE__);
     if (!cspp) {
+        memset(&result, 0, sizeof(result));
         return result;
     }
     int success = 1;
@@ -288,7 +290,7 @@ TextTreeVisualization tree_visualization_create(TextTreeNode* tree, sfFont* font
 
 
 
-    sfText** txtpp = calloc(n + ptrn,sizeof(sfText*));
+    sfText** txtpp = xcalloc(n + ptrn,sizeof(sfText*), __LINE__, __FILE__);
     if (!txtpp) {
         for (size_t i = 0; i < n; ++i) {
             sfCircleShape_destroy(cspp[i]);
@@ -354,7 +356,7 @@ TextTreeVisualization tree_visualization_create(TextTreeNode* tree, sfFont* font
 
     /* pointers */
 
-    sfVertex* vcs = malloc(sizeof(sfVertex) * ptrn * 2);
+    sfVertex* vcs = xmalloc(sizeof(sfVertex) * ptrn * 2, __LINE__, __FILE__);
     if (!vcs) {
         for (size_t i = 0; i < n; ++i) {
             sfCircleShape_destroy(cspp[i]);

@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "xalloc.h"
 
 typedef struct XmlReadStates_ {
   enum XmlState {
@@ -52,12 +53,12 @@ static void free_all(XmlReadStates *states) {
 static int xs_push(XmlReadStates *xs) {
     size_t name_sz = xs->input - xs->tmpNameRead;
 
-        char *new_name = malloc((name_sz + 1)*sizeof(char));
+        char *new_name = xmalloc((name_sz + 1)*sizeof(char), __LINE__, __FILE__);
         if (!new_name) {
           return 0;
         }
 
-        StringNode *new_node = malloc(sizeof(StringNode));
+        StringNode *new_node = xmalloc(sizeof(StringNode), __LINE__, __FILE__);
         if (!new_node) {
           free(new_name);
           return 0;
@@ -80,18 +81,18 @@ static int xs_pop(XmlReadStates *xs) {
   char *xml_prop;
 
   if (xs->stack->nr_chilren) {
-    childrenArray = malloc(sizeof(StringTreeNode) * xs->stack->nr_chilren);
+    childrenArray = xmalloc(sizeof(StringTreeNode) * xs->stack->nr_chilren, __LINE__, __FILE__);
     if (!childrenArray) {
       return 0;
     }
   }
 
-    xml_prop = malloc((1+xs->char_list.size) * sizeof(char));
+    xml_prop = xmalloc((1+xs->char_list.size) * sizeof(char), __LINE__, __FILE__);
     if (!xml_prop) {
       free(childrenArray);
       return 0;
     }
-    TreeListNode *newListNode = malloc(sizeof(TreeListNode));
+    TreeListNode *newListNode = xmalloc(sizeof(TreeListNode), __LINE__, __FILE__);
     if (!newListNode) {
       free(childrenArray);
       free(xml_prop);
@@ -156,7 +157,7 @@ StringTreeNode read_from_xml(const char *xml_contents) {
   xs.stack_size = 1;
 
   /* create the sentinel */
-  xs.stack = malloc(sizeof(StringNode));
+  xs.stack = xmalloc(sizeof(StringNode), __LINE__, __FILE__);
   if (!xs.stack) {
     return tree;
   }
@@ -300,12 +301,12 @@ StringTreeNode read_from_xml(const char *xml_contents) {
         default:
           /* add the prop */
           {
-            TreeListNode *newListNode = malloc(sizeof(TreeListNode));
+            TreeListNode *newListNode = xmalloc(sizeof(TreeListNode), __LINE__, __FILE__);
             if (!newListNode) {
               free_all(&xs);
               return tree;
             }
-            char* newName = malloc(xs.propNameEnd - xs.propNamePtr + 1);
+            char* newName = xmalloc(xs.propNameEnd - xs.propNamePtr + 1, __LINE__, __FILE__);
             if (!newName) {
               free(newListNode);
               free_all(&xs);
@@ -338,7 +339,7 @@ StringTreeNode read_from_xml(const char *xml_contents) {
           size_t value_sz = xs.input - xs.propValuePtr;
           char* newValue = NULL;
           if (value_sz) {
-            newValue = malloc(xs.input - xs.propValuePtr + 1);
+            newValue = xmalloc(xs.input - xs.propValuePtr + 1, __LINE__, __FILE__);
             if (!newValue) {
               free_all(&xs);
               return tree;
@@ -346,13 +347,13 @@ StringTreeNode read_from_xml(const char *xml_contents) {
             newValue[xs.input - xs.propValuePtr] = 0;
             strncpy(newValue, xs.propValuePtr, xs.input - xs.propValuePtr);
           }
-            TreeListNode *newListNode = malloc(sizeof(TreeListNode));
+            TreeListNode *newListNode = xmalloc(sizeof(TreeListNode), __LINE__, __FILE__);
             if (!newListNode) {
               free(newValue);
               free_all(&xs);
               return tree;
             }
-            char* newName = malloc(xs.propNameEnd - xs.propNamePtr + 1);
+            char* newName = xmalloc(xs.propNameEnd - xs.propNamePtr + 1, __LINE__, __FILE__);
             if (!newName) {
               free(newValue);
               free(newListNode);
@@ -406,7 +407,7 @@ StringTreeNode read_from_xml(const char *xml_contents) {
   if (xs.stack->nr_chilren) {
     /* create an array */
     StringTreeNode *chilrenArray =
-        malloc(sizeof(StringTreeNode) * xs.stack->nr_chilren);
+        xmalloc(sizeof(StringTreeNode) * xs.stack->nr_chilren, __LINE__, __FILE__);
 
     if (!chilrenArray) {
       free_all(&xs);

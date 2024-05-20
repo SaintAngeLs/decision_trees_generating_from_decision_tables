@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
+#include "xalloc.h"
 
 static int convertToInt(DataQueryKey* dst, DataQueryKey data, size_t lvl);
 static int convertToReal(DataQueryKey* dst, DataQueryKey data, size_t lvl);
@@ -55,7 +56,7 @@ DataQueryKey copyKeyStructure(DataQueryKey data) {
       return data;
     }
     case DQString: {
-      char* p = malloc(data.key.data.str.n+1);
+      char* p = xmalloc(data.key.data.str.n+1, __LINE__, __FILE__);
       if (!p) {
         data.type = DQNone;
         return data;
@@ -74,7 +75,7 @@ DataQueryKey copyKeyStructure(DataQueryKey data) {
   r.type = DQList;
   r.key.data.list.n = 0;
   r.key.data.list.n = data.key.data.list.n;
-  r.key.data.list.root = malloc(data.key.data.list.n * sizeof(DataQueryKey));
+  r.key.data.list.root = xmalloc(data.key.data.list.n * sizeof(DataQueryKey), __LINE__, __FILE__);
   if (!r.key.data.list.root) {
     r.type = DQNone;
     return r;
@@ -110,7 +111,7 @@ DataQueryKey createTreeStructure(StringTreeNode tree, ssize_t* hierarchy, size_t
       list.type = DQList;
       
       list.key.data.list.n = tree.nr_children;
-      list.key.data.list.root = malloc(tree.nr_children * sizeof(DataQueryKey));
+      list.key.data.list.root = xmalloc(tree.nr_children * sizeof(DataQueryKey), __LINE__, __FILE__);
       if (!list.key.data.list.root) {
         list.type = DQNone;
         return list;
@@ -121,6 +122,7 @@ DataQueryKey createTreeStructure(StringTreeNode tree, ssize_t* hierarchy, size_t
         list.key.data.list.root[i] = createTreeStructure(tree.children[i], hierarchy, hchy_size);
         if (list.key.data.list.root[i].type == DQNone) {
           freeKeys(list.key.data.list.root, tree.nr_children, 1);
+          free(list.key.data.list.root);
           list.type = DQNone;
           return list;
         }
@@ -137,8 +139,9 @@ DataQueryKey createTreeStructure(StringTreeNode tree, ssize_t* hierarchy, size_t
   DataQueryKey key;
   key.type = DQString;
   size_t strln = strlen(tree.data);
-  key.key.data.str.ptr = malloc(strln + 1);
+  key.key.data.str.ptr = xmalloc(strln + 1, __LINE__, __FILE__);
   if (!key.key.data.str.ptr) {
+
     key.type = DQNone;
     return key;
   }
@@ -160,7 +163,7 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
   none.type = DQNone;
 
   /* exec stack */
-  DataQueryKey *execStack = malloc(size * sizeof(DataQueryKey));
+  DataQueryKey *execStack = xmalloc(size * sizeof(DataQueryKey), __LINE__, __FILE__);
   if (!execStack) {
     return none;
   }
@@ -168,7 +171,7 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
   size_t execStackCap = size;
 
   /* tree prop stack */
-  ssize_t *treeStack = malloc(100 * sizeof(ssize_t));
+  ssize_t *treeStack = xmalloc(100 * sizeof(ssize_t), __LINE__, __FILE__);
   if (!treeStack) {
     free(execStack);
     return none;
@@ -208,6 +211,7 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
       case DQK_toStr: {
         if (!(stackp+1-execStack)) { data_query_exit(execStack, stackp, treeStack); return none; }
         DataQueryKey r;
+        r.type = DQNone;
         int sccdd = convertToStr(&r, *stackp, lvl); /* changed this only */
         if (!sccdd) { freeKey(&r); data_query_exit(execStack, stackp, treeStack); return none; }
         freeKey(stackp);
@@ -221,7 +225,7 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
 
         /*check capacity*/
         if ((treeptr+1-treeStack) == treeStackCap) {
-          ssize_t* newTreeStack = realloc(treeStack, (treeStackCap + 100)*sizeof(size_t));
+          ssize_t* newTreeStack = xrealloc(treeStack, (treeStackCap + 100)*sizeof(size_t), __LINE__, __FILE__);
           if (!newTreeStack) { data_query_exit(execStack, stackp, treeStack); return none; }
           treeStack = newTreeStack;
           treeStackCap = treeStackCap + 100;
@@ -235,7 +239,7 @@ DataQueryKey miniml_data_query(DataQueryKey *arr, size_t size,
       }
       case DQK_foreach: {
         if ((treeptr+1-treeStack) == treeStackCap) {
-          ssize_t* newTreeStack = realloc(treeStack, (treeStackCap + 100)*sizeof(size_t));
+          ssize_t* newTreeStack = xrealloc(treeStack, (treeStackCap + 100)*sizeof(size_t), __LINE__, __FILE__);
           if (!newTreeStack) { data_query_exit(execStack, stackp, treeStack); return none; }
           treeStack = newTreeStack;
           treeStackCap = treeStackCap + 100;
@@ -380,7 +384,7 @@ static int convertToInt(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
 
-    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    DataQueryKey* dstarr = xcalloc(data.key.data.list.n, sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!dstarr) {
       return 0;
     }
@@ -431,7 +435,7 @@ static int convertToReal(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
 
-    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    DataQueryKey* dstarr = xcalloc(data.key.data.list.n, sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!dstarr) {
       return 0;
     }
@@ -482,7 +486,7 @@ int convertToStr(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
  if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
 
-    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    DataQueryKey* dstarr = xcalloc(data.key.data.list.n, sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!dstarr) {
       return 0;
     }
@@ -504,10 +508,8 @@ int convertToStr(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
 
   if (data.type == DQString) {
     if (1) {
-      char* p = malloc(data.key.data.str.n+1);
+      char* p = xmalloc(data.key.data.str.n+1, __LINE__, __FILE__);
       if (!p) {
-        data.type = DQNone;
-        *dst = data;
         return 0;
       }
       memcpy(p, data.key.data.str.ptr, data.key.data.str.n);
@@ -523,14 +525,10 @@ int convertToStr(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (data.type == DQInt) {
     int len = snprintf(NULL, 0, "%ld", data.key.data.integ);
     if (len == 0) {
-      data.type = DQNone;
-      *dst = data;
       return 0;
     }
-    char* str = malloc(len + 1);
+    char* str = xmalloc(len + 1, __LINE__, __FILE__);
     if (!str) {
-      data.type = DQNone;
-      *dst = data;
       return 0;
     }
     snprintf(str, len + 1, "%ld", data.key.data.integ);
@@ -544,14 +542,10 @@ int convertToStr(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (data.type == DQReal) {
     int len = snprintf(NULL, 0, "%lf", data.key.data.real);
     if (len == 0) {
-      data.type = DQNone;
-      *dst = data;
       return 0;
     }
-    char* str = malloc(len + 1);
+    char* str = xmalloc(len + 1, __LINE__, __FILE__);
     if (!str) {
-      data.type = DQNone;
-      *dst = data;
       return 0;
     }
     snprintf(str, len + 1, "%lf", data.key.data.real);
@@ -564,7 +558,7 @@ int convertToStr(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
 
   if (data.type == DQList) {
     size_t n = data.key.data.list.n;
-    DataQueryKey* arr = calloc(n, sizeof(DataQueryKey));
+    DataQueryKey* arr = xcalloc(n, sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!arr) {
       return 0;
     }
@@ -580,7 +574,7 @@ int convertToStr(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
     for (size_t i = 0; i < n; ++i) {
       len += arr[i].key.data.str.n + 3;
     }
-    char* newStr = malloc(len);
+    char* newStr = xmalloc(len, __LINE__, __FILE__);
     if (!newStr) {
       freeKeys(arr,n,0);
       free(arr);
@@ -616,7 +610,7 @@ static int create_distinct(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
 
-    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    DataQueryKey* dstarr = xcalloc(data.key.data.list.n, sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!dstarr) {
       return 0;
     }
@@ -666,7 +660,7 @@ static int create_distinct(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
     }
   }
 
-  newList.key.data.list.root = calloc(dsct_n, sizeof(DataQueryKey));
+  newList.key.data.list.root = xcalloc(dsct_n, sizeof(DataQueryKey), __LINE__, __FILE__);
   newList.key.data.list.n = dsct_n;
 
   if (!newList.key.data.list.root) {
@@ -701,7 +695,7 @@ static int create_union(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
 
-    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    DataQueryKey* dstarr = xcalloc(data.key.data.list.n, sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!dstarr) {
       return 0;
     }
@@ -731,7 +725,7 @@ static int create_union(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
     n += p->key.data.list.n;
   }
 
-  DataQueryKey* new_set = malloc(n * sizeof(DataQueryKey));
+  DataQueryKey* new_set = xmalloc(n * sizeof(DataQueryKey), __LINE__, __FILE__);
   if (!new_set) {
     return 0;
   }
@@ -764,7 +758,7 @@ static int calculate_avg(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
 
-    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    DataQueryKey* dstarr = xcalloc(data.key.data.list.n, sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!dstarr) {
       return 0;
     }
@@ -831,7 +825,7 @@ static int calculate_sum(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
 
-    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    DataQueryKey* dstarr = xcalloc(data.key.data.list.n, sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!dstarr) {
       return 0;
     }
@@ -898,7 +892,7 @@ static int calculate_multiplication(DataQueryKey* dst, DataQueryKey data, size_t
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
 
-    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    DataQueryKey* dstarr = xcalloc(data.key.data.list.n, sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!dstarr) {
       return 0;
     }
@@ -965,7 +959,7 @@ static int calculate_min(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
 
-    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    DataQueryKey* dstarr = xcalloc(data.key.data.list.n, sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!dstarr) {
       return 0;
     }
@@ -1034,7 +1028,7 @@ static int calculate_max(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
 
-    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    DataQueryKey* dstarr = xcalloc(data.key.data.list.n, sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!dstarr) {
       return 0;
     }
@@ -1103,7 +1097,7 @@ static int get_count(DataQueryKey* dst, DataQueryKey data, size_t lvl) {
   if (lvl) {
     DataQueryKey* datap = data.key.data.list.root;
 
-    DataQueryKey* dstarr = calloc(data.key.data.list.n, sizeof(DataQueryKey));
+    DataQueryKey* dstarr = xcalloc(data.key.data.list.n, sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!dstarr) {
       return 0;
     }

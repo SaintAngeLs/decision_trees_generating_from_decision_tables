@@ -6,6 +6,7 @@
 #include "text_tree.h"
 #include <math.h>
 #include <stdlib.h>
+#include "xalloc.h"
 #include <string.h>
 #include <assert.h>
 
@@ -86,9 +87,9 @@ static DecisionTable get_filtered_table(DecisionTable table, size_t best_attr, D
         return newTable;
     }
 
-    newTable.data = malloc(sizeof(DataQueryKey) * nrRows * table.nr_columns);
+    newTable.data = xmalloc(sizeof(DataQueryKey) * nrRows * table.nr_columns, __LINE__, __FILE__);
     if (!newTable.data) {
-        newTable.titles = NULL;
+        memset(&newTable, 0, sizeof(newTable));
         return newTable;
     }
 
@@ -310,18 +311,18 @@ static DataQueryKeyAvlNode2* next_dfs2(DataQueryKeyAvlNode2* root) {
 static int information_gain(double* result, DecisionTable table, size_t attr, size_t target_attribute) {
     double attribute_entropy = 0;
 
-    DataQueryKeyAvlNode* avl_values_storage = malloc(table.nr_rows * sizeof(DataQueryKeyAvlNode));
+    DataQueryKeyAvlNode* avl_values_storage = xmalloc(table.nr_rows * sizeof(DataQueryKeyAvlNode), __LINE__, __FILE__);
     if (!avl_values_storage) {
         return 0;
     }
 
-    DataQueryKeyAvlNode* avl_target_values_storage = malloc(table.nr_rows * sizeof(DataQueryKeyAvlNode));
+    DataQueryKeyAvlNode* avl_target_values_storage = xmalloc(table.nr_rows * sizeof(DataQueryKeyAvlNode), __LINE__, __FILE__);
     if (!avl_target_values_storage) {
         free(avl_values_storage);
         return 0;
     }
 
-    DataQueryKeyAvlNode2* avl_values_storage2 = malloc(table.nr_rows * sizeof(DataQueryKeyAvlNode2));
+    DataQueryKeyAvlNode2* avl_values_storage2 = xmalloc(table.nr_rows * sizeof(DataQueryKeyAvlNode2), __LINE__, __FILE__);
     if (!avl_values_storage2) {
         free(avl_target_values_storage);
         free(avl_values_storage);
@@ -474,7 +475,7 @@ TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
             return none;
         }
 
-        node.node_text = malloc(strCvt.key.data.str.n+1);
+        node.node_text = xmalloc(strCvt.key.data.str.n+1, __LINE__, __FILE__);
         if (!node.node_text) {
             freeKey(&strCvt);
             return none;
@@ -496,7 +497,7 @@ TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
         TextTreeNode node;
 
         /* the simplest way to calculate mode element */
-        int* modeArr = malloc(table.nr_rows * sizeof(int));
+        int* modeArr = xmalloc(table.nr_rows * sizeof(int), __LINE__, __FILE__);
         if (!modeArr) {
              return none;
         }
@@ -545,12 +546,13 @@ TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
 
         DataQueryKey dominantClass = maxNowKey;
         DataQueryKey strCvt;
+        strCvt.type = DQNone;
         int scss = convertToStr(&strCvt, dominantClass, 0);
         if (!scss) {
             return none;
         }
 
-        node.node_text = malloc(strCvt.key.data.str.n+1);
+        node.node_text = xmalloc(strCvt.key.data.str.n+1, __LINE__, __FILE__);
         if (!node.node_text) {
             freeKey(&strCvt);
             return none;
@@ -576,7 +578,7 @@ TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
 
     TextTreeNode newNode;
 
-    newNode.node_text = malloc(strlen(table.titles[best_attr]) + 1);
+    newNode.node_text = xmalloc(strlen(table.titles[best_attr]) + 1, __LINE__, __FILE__);
     if (!newNode.node_text) {
         return none;
     }
@@ -584,7 +586,7 @@ TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
     newNode.node_text[strlen(table.titles[best_attr])] = 0;
     strncpy(newNode.node_text, table.titles[best_attr], strlen(table.titles[best_attr]));
 
-    DataQueryKey* bestAttrValues = malloc(table.nr_rows*sizeof(DataQueryKey));
+    DataQueryKey* bestAttrValues = xmalloc(table.nr_rows*sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!bestAttrValues) {
         free(newNode.node_text);
         return none;
@@ -600,7 +602,7 @@ TextTreeNode build_decision_tree(DecisionTable table, int* attributes,
 
     DataQueryKey currentValue = bestAttrValues[0];
 
-    TextTreeNode* newNodeChildren = malloc(sizeof(TextTreeNode) * table.nr_rows);
+    TextTreeNode* newNodeChildren = xmalloc(sizeof(TextTreeNode) * table.nr_rows, __LINE__, __FILE__);
     if (!newNodeChildren) {
 
         free(bestAttrValues);
@@ -608,6 +610,7 @@ free(newNode.node_text);
         return none;
 
     }
+    memset(newNodeChildren, 0, sizeof(TextTreeNode) * table.nr_rows);
     size_t nrNewChildren = 0;
 
     for (size_t i = 0; i < table.nr_rows; ++i) {
@@ -615,7 +618,10 @@ free(newNode.node_text);
         if (i == 0 || !data_queries_equal(currentValue, bestAttrValues[i])) {
             DecisionTable subdata = get_filtered_table(table, best_attr, bestAttrValues[i]);
 
-            if (subdata.titles == NULL) {
+            if (subdata.titles == NULL || subdata.data == NULL) {
+                for (size_t j = 0; j < table.nr_rows; ++j) {
+                    free_text_tree(newNodeChildren[j]);
+                }
                 free(newNodeChildren);
                 free(bestAttrValues);
                 free(newNode.node_text);
@@ -627,8 +633,11 @@ free(newNode.node_text);
                 TextTreeNode* node = &newNodeChildren[nrNewChildren];
 
                 /* the simplest way to calculate mode element */
-                int* modeArr = malloc(table.nr_rows * sizeof(int));
+                int* modeArr = xmalloc(table.nr_rows * sizeof(int), __LINE__, __FILE__);
                 if (!modeArr) {
+                    for (size_t j = 0; j < table.nr_rows; ++j) {
+                        free_text_tree(newNodeChildren[j]);
+                    }
                     free(newNodeChildren);
                     free_filtered_table(subdata);
                         free(bestAttrValues);
@@ -670,6 +679,9 @@ free(newNode.node_text);
             int scss = convertToStr(&strCvt, dominantClass, 0);
             
             if (!scss) {
+                for (size_t j = 0; j < table.nr_rows; ++j) {
+                        free_text_tree(newNodeChildren[j]);
+                    }
                 free(newNodeChildren);
                 free_filtered_table(subdata);
                     free(bestAttrValues);
@@ -677,8 +689,11 @@ free(newNode.node_text);
                 return none;
             }
 
-            node->node_text = malloc(strCvt.key.data.str.n+1);
+            node->node_text = xmalloc(strCvt.key.data.str.n+1, __LINE__, __FILE__);
             if (!node->node_text) {
+                for (size_t j = 0; j < table.nr_rows; ++j) {
+                        free_text_tree(newNodeChildren[j]);
+                    }
                 free(newNodeChildren);
                 free_filtered_table(subdata);
                     free(bestAttrValues);
@@ -707,6 +722,9 @@ free(newNode.node_text);
                 int scss = convertToStr(&newStrPtr, bestAttrValues[i], 0);
 
                 if (!scss) {
+                    for (size_t j = 0; j < table.nr_rows; ++j) {
+                        free_text_tree(newNodeChildren[j]);
+                    }
                     free(newNodeChildren);
                     free_filtered_table(subdata);
                     free(bestAttrValues);
@@ -724,6 +742,18 @@ free(newNode.node_text);
                 *node = build_decision_tree(subdata, attributes, numericAttributes,
                     nr_attr, depth-1, target_attribute,
                     newStrPtr.key.data.str.ptr, &newNode);
+
+                if (!node->nr_children && !node->node_text && !node->children) {
+                    freeKey(&newStrPtr);
+                    for (size_t j = 0; j < table.nr_rows; ++j) {
+                        free_text_tree(newNodeChildren[j]);
+                    }
+                    free(newNodeChildren);
+                    free_filtered_table(subdata);
+                    free(bestAttrValues);
+                    free(newNode.node_text);
+                    return none;
+                }
                 
 
                 /*--nr_attr;
@@ -744,6 +774,9 @@ free(newNode.node_text);
     }
 
     else if (nrNewChildren == 0) {
+        for (size_t j = 0; j < table.nr_rows; ++j) {
+                        free_text_tree(newNodeChildren[j]);
+                    }
         free(newNodeChildren);
         free(bestAttrValues);
         newNode.parent = parent;

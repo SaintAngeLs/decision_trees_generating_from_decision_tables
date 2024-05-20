@@ -1,6 +1,7 @@
 /* approved */
 #include "parser_utils.h"
 #include <stdlib.h>
+#include "xalloc.h"
 
 void printStringTree(StringTreeNode* st, int level) {
 	if (st->name) {
@@ -37,7 +38,7 @@ char* get_file_contents(FILE* fp) {
     }
     fseek(fp, 0, SEEK_SET);
 
-    void* fcontent = malloc(size + 1);
+    void* fcontent = xmalloc(size + 1, __LINE__, __FILE__);
 
     if (!fcontent) {
         return NULL;

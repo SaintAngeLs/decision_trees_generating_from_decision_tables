@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "xalloc.h"
 
 void print_decision_table(DecisionTable table) {
     for (size_t j = 0; j < table.nr_columns; ++j) {
@@ -44,12 +45,12 @@ DecisionTable create_decision_table_from_csv(CsvData* csv, DataQueryType* types)
     DecisionTable dectab;
     memset(&dectab, 0, sizeof(dectab));
     
-    char** titles = malloc(sizeof(char*) * csv->nr_columns);
+    char** titles = xmalloc(sizeof(char*) * csv->nr_columns, __LINE__, __FILE__);
     if (!titles) {
         return dectab;
     }
 
-    DataQueryKey* newData = malloc((csv->nr_rows-1)*csv->nr_columns * sizeof(DataQueryKey));
+    DataQueryKey* newData = xmalloc((csv->nr_rows-1)*csv->nr_columns * sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!newData) {
         free(titles);
         return dectab;
@@ -58,7 +59,7 @@ DecisionTable create_decision_table_from_csv(CsvData* csv, DataQueryType* types)
     memset(titles, 0,sizeof(char*) * csv->nr_columns);
 
     for (size_t i = 0; i < csv->nr_columns; ++i) {
-        titles[i] = malloc(strlen(csv->data[i])+1);
+        titles[i] = xmalloc(strlen(csv->data[i])+1, __LINE__, __FILE__);
 
         if (!titles[i]) {
             for (size_t ii = 0; ii < csv->nr_columns; ++ii) {
@@ -93,7 +94,7 @@ DecisionTable create_decision_table_from_csv(CsvData* csv, DataQueryType* types)
             else { /* str */
                 
                 newData[(i-1)*csv->nr_columns+j].key.data.str.ptr =
-                    malloc(strlen(csv->data[i*csv->nr_columns+j])+1);
+                    xmalloc(strlen(csv->data[i*csv->nr_columns+j])+1, __LINE__, __FILE__);
 
                 if (!newData[(i-1)*csv->nr_columns+j].key.data.str.ptr) {
                     for (size_t ii = 0; ii < csv->nr_columns; ++ii) {
@@ -139,7 +140,7 @@ DecisionTable create_decision_table_from_parsed_tree(StringTreeNode tree,
 
     n = firstKey.key.data.list.n;
     
-    DataQueryKey* newData = malloc(n*nr_columns * sizeof(DataQueryKey));
+    DataQueryKey* newData = xmalloc(n*nr_columns * sizeof(DataQueryKey), __LINE__, __FILE__);
     if (!newData) {
         freeKey(&firstKey);
         return dectab;
