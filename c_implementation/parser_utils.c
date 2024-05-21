@@ -1,69 +1,71 @@
 /* approved */
 #include "parser_utils.h"
-#include <stdlib.h>
 #include "xalloc.h"
+#include <stdlib.h>
 
-void printStringTree(StringTreeNode* st, int level) {
-	if (st->name) {
-		for (int i = 0; i < level; ++i) {
-		printf("    ");
-	}
-		printf("Name [%s]\n", st->name);
-	}
-	if (st->data) {
-		for (int i = 0; i < level; ++i) {
-		printf("    ");
-	}
-		printf("Prop [%s]\n", st->data);
-	}
-	for (int i = 0; i < level; ++i) {
-		printf("    ");
-	}
-	printf("Nr of children: [%lu]\n", st->nr_children);
-	for (size_t i = 0; i < st->nr_children; ++i) {
-		for (int i = 0; i < level; ++i) {
-			printf("    ");
-		}
-		printf("Child %lu:\n", i);
-		printStringTree(&st->children[i], level+1);
-	}
+void printStringTree(StringTreeNode *st, int level) {
+  if (st->name) {
+    for (int i = 0; i < level; ++i) {
+      printf("    ");
+    }
+    printf("Name [%s]\n", st->name);
+  }
+  if (st->data) {
+    for (int i = 0; i < level; ++i) {
+      printf("    ");
+    }
+    printf("Prop [%s]\n", st->data);
+  }
+  for (int i = 0; i < level; ++i) {
+    printf("    ");
+  }
+  printf("Nr of children: [%lu]\n", st->nr_children);
+  for (size_t i = 0; i < st->nr_children; ++i) {
+    for (int i = 0; i < level; ++i) {
+      printf("    ");
+    }
+    printf("Child %lu:\n", i);
+    printStringTree(&st->children[i], level + 1);
+  }
 }
 
-char* get_file_contents(FILE* fp) {
+char *get_file_contents(FILE *fp) {
   /* size */
-    fseek(fp, 0, SEEK_END); 
-    long size = ftell(fp);
-    if (size == 0) {
-        return NULL; /* file is empty */
-    }
-    fseek(fp, 0, SEEK_SET);
+  fseek(fp, 0, SEEK_END);
+  long size = ftell(fp);
+  if (size == 0) {
+    return NULL; /* file is empty */
+  }
+  fseek(fp, 0, SEEK_SET);
 
-    void* fcontent = xmalloc(size + 1, __LINE__, __FILE__);
+  void *fcontent = xmalloc(size + 1, __LINE__, __FILE__);
 
-    if (!fcontent) {
-        return NULL;
-    }
+  if (!fcontent) {
+    return NULL;
+  }
 
-    if (size != fread(fcontent, 1, size, fp)) {
-        free(fcontent);
-        return NULL;
-    }
-    
-    char* str = fcontent;
-    str[size] = '\0';
-    for (char* c = str+size-1; c+1 != str && (*c == '\n' || *c == '\r'); --c) {
-        *c = '\0';
-    }
+  if (size != fread(fcontent, 1, size, fp)) {
+    free(fcontent);
+    return NULL;
+  }
 
-    return str;
+  char *str = fcontent;
+  str[size] = '\0';
+  for (char *c = str + size - 1; c + 1 != str && (*c == '\n' || *c == '\r');
+       --c) {
+    *c = '\0';
+  }
+
+  return str;
 }
 
-char* get_str_from_file(const char* filename) {
-	FILE* fp = fopen(filename, "r");
-	if (!fp) return NULL;
-	char* str = get_file_contents(fp);
-	fclose(fp);
-	return str;
+char *get_str_from_file(const char *filename) {
+  FILE *fp = fopen(filename, "r");
+  if (!fp)
+    return NULL;
+  char *str = get_file_contents(fp);
+  fclose(fp);
+  return str;
 }
 
 /* for parsers */

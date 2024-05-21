@@ -6,6 +6,6 @@
  *
  * @param tree A decision tree visualization
  */
-void visualize_tree(TextTreeVisualization* tree);
+void visualize_tree(TextTreeVisualization *tree);
 
 #endif /* MINIML_TREE_VISUALIZER_H */

@@ -2,11 +2,11 @@
 #include "char_list.h"
 #include "parser_utils.h"
 #include "string_tree.h"
+#include "xalloc.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "xalloc.h"
 
 typedef struct XmlReadStates_ {
   enum XmlState {
@@ -51,27 +51,27 @@ static void free_all(XmlReadStates *states) {
 }
 
 static int xs_push(XmlReadStates *xs) {
-    size_t name_sz = xs->input - xs->tmpNameRead;
+  size_t name_sz = xs->input - xs->tmpNameRead;
 
-        char *new_name = xmalloc((name_sz + 1)*sizeof(char), __LINE__, __FILE__);
-        if (!new_name) {
-          return 0;
-        }
+  char *new_name = xmalloc((name_sz + 1) * sizeof(char), __LINE__, __FILE__);
+  if (!new_name) {
+    return 0;
+  }
 
-        StringNode *new_node = xmalloc(sizeof(StringNode), __LINE__, __FILE__);
-        if (!new_node) {
-          free(new_name);
-          return 0;
-        }
+  StringNode *new_node = xmalloc(sizeof(StringNode), __LINE__, __FILE__);
+  if (!new_node) {
+    free(new_name);
+    return 0;
+  }
 
-        memset(new_node, 0, sizeof(*new_node));
+  memset(new_node, 0, sizeof(*new_node));
 
-        new_node->name = new_name;
-        strncpy(new_name, xs->tmpNameRead, name_sz);
-        new_name[name_sz] = 0;
-        new_node->prev = xs->stack;
-        xs->stack = new_node;
-        ++xs->stack_size;
+  new_node->name = new_name;
+  strncpy(new_name, xs->tmpNameRead, name_sz);
+  new_name[name_sz] = 0;
+  new_node->prev = xs->stack;
+  xs->stack = new_node;
+  ++xs->stack_size;
   return 1;
 }
 
@@ -81,26 +81,28 @@ static int xs_pop(XmlReadStates *xs) {
   char *xml_prop;
 
   if (xs->stack->nr_chilren) {
-    childrenArray = xmalloc(sizeof(StringTreeNode) * xs->stack->nr_chilren, __LINE__, __FILE__);
+    childrenArray = xmalloc(sizeof(StringTreeNode) * xs->stack->nr_chilren,
+                            __LINE__, __FILE__);
     if (!childrenArray) {
       return 0;
     }
   }
 
-    xml_prop = xmalloc((1+xs->char_list.size) * sizeof(char), __LINE__, __FILE__);
-    if (!xml_prop) {
-      free(childrenArray);
-      return 0;
-    }
-    TreeListNode *newListNode = xmalloc(sizeof(TreeListNode), __LINE__, __FILE__);
-    if (!newListNode) {
-      free(childrenArray);
-      free(xml_prop);
-      return 0;
-    }
+  xml_prop =
+      xmalloc((1 + xs->char_list.size) * sizeof(char), __LINE__, __FILE__);
+  if (!xml_prop) {
+    free(childrenArray);
+    return 0;
+  }
+  TreeListNode *newListNode = xmalloc(sizeof(TreeListNode), __LINE__, __FILE__);
+  if (!newListNode) {
+    free(childrenArray);
+    free(xml_prop);
+    return 0;
+  }
 
   if (xs->stack->nr_chilren) {
-    StringTreeNode* p = childrenArray;
+    StringTreeNode *p = childrenArray;
     TreeListNode *tmp_child_node = xs->stack->childFirst;
     size_t i;
 
@@ -110,8 +112,7 @@ static int xs_pop(XmlReadStates *xs) {
     }
   }
 
-  if (1)
-  {
+  if (1) {
     /*xml contents*/
     xml_prop[xs->char_list.size] = 0;
 
@@ -177,8 +178,7 @@ StringTreeNode read_from_xml(const char *xml_contents) {
       case '<':
         xs.state = XSReadName;
         break;
-      default:
-      {
+      default: {
         if (!add_to_char_list(*xs.input, &xs.char_list)) {
           free_all(&xs);
           return tree;
@@ -190,7 +190,7 @@ StringTreeNode read_from_xml(const char *xml_contents) {
     case XSReadName:
       switch (*xs.input) {
       case '/':
-         if (xs.stack_size == 1) {
+        if (xs.stack_size == 1) {
           free_all(&xs);
           return tree;
         }
@@ -235,15 +235,14 @@ StringTreeNode read_from_xml(const char *xml_contents) {
         --xs.input;
         break;
       case ' ':
-      if (!xs_push(&xs)) {
+        if (!xs_push(&xs)) {
           free_all(&xs);
           return tree;
         }
         /* <name [options] */
         xs.state = XSScanTag;
         break;
-      case '>':
-      {
+      case '>': {
         if (!xs_push(&xs)) {
           free_all(&xs);
           return tree;
@@ -266,8 +265,7 @@ StringTreeNode read_from_xml(const char *xml_contents) {
         /* <name [options] */
         xs.state = XSExitSingleTag;
         break;
-      case '>':
-      {
+      case '>': {
         clear_char_list(&xs.char_list);
         xs.state = XSDefault;
         break;
@@ -277,121 +275,124 @@ StringTreeNode read_from_xml(const char *xml_contents) {
           xs.state = XSReadPropertyName;
           xs.propNamePtr = xs.input;
         } else {
-
         }
         break;
       }
       break;
     case XSReadPropertyName:
-        switch (*xs.input) {
-        case '=':
-          xs.propNameEnd = xs.input;
-          xs.state = XSReadAfterPropName;
-          break;
-        default:
-          break;
-        }
+      switch (*xs.input) {
+      case '=':
+        xs.propNameEnd = xs.input;
+        xs.state = XSReadAfterPropName;
+        break;
+      default:
+        break;
+      }
       break;
     case XSReadAfterPropName:
       switch (*xs.input) {
-        case '\"':
-          xs.propValuePtr = xs.input+1;
-          xs.state = XSReadPropContents;
-          break;
-        default:
-          /* add the prop */
-          {
-            TreeListNode *newListNode = xmalloc(sizeof(TreeListNode), __LINE__, __FILE__);
-            if (!newListNode) {
-              free_all(&xs);
-              return tree;
-            }
-            char* newName = xmalloc(xs.propNameEnd - xs.propNamePtr + 1, __LINE__, __FILE__);
-            if (!newName) {
-              free(newListNode);
-              free_all(&xs);
-              return tree;
-            }
-            newListNode->data.data = NULL;
-            newName[xs.propNameEnd - xs.propNamePtr] = 0;
-            strncpy(newName, xs.propNamePtr, xs.propNameEnd - xs.propNamePtr);
-            newListNode->data.children = NULL;
-            newListNode->data.nr_children = 0;
-            newListNode->data.name = newName;
-            newListNode->next = NULL;
-             if (xs.stack->childLast) {
-              xs.stack->childLast->next = newListNode;
-            } else {
-              xs.stack->childFirst = newListNode;
-            }
-            xs.stack->childLast = newListNode;
-            xs.stack->nr_chilren++;
+      case '\"':
+        xs.propValuePtr = xs.input + 1;
+        xs.state = XSReadPropContents;
+        break;
+      default:
+        /* add the prop */
+        {
+          TreeListNode *newListNode =
+              xmalloc(sizeof(TreeListNode), __LINE__, __FILE__);
+          if (!newListNode) {
+            free_all(&xs);
+            return tree;
           }
-          xs.state = XSScanTag;
-          --xs.input;
-          break;
+          char *newName =
+              xmalloc(xs.propNameEnd - xs.propNamePtr + 1, __LINE__, __FILE__);
+          if (!newName) {
+            free(newListNode);
+            free_all(&xs);
+            return tree;
+          }
+          newListNode->data.data = NULL;
+          newName[xs.propNameEnd - xs.propNamePtr] = 0;
+          strncpy(newName, xs.propNamePtr, xs.propNameEnd - xs.propNamePtr);
+          newListNode->data.children = NULL;
+          newListNode->data.nr_children = 0;
+          newListNode->data.name = newName;
+          newListNode->next = NULL;
+          if (xs.stack->childLast) {
+            xs.stack->childLast->next = newListNode;
+          } else {
+            xs.stack->childFirst = newListNode;
+          }
+          xs.stack->childLast = newListNode;
+          xs.stack->nr_chilren++;
         }
+        xs.state = XSScanTag;
+        --xs.input;
+        break;
+      }
       break;
     case XSReadPropContents:
       switch (*xs.input) {
-        case '\"':
-        {
-          size_t value_sz = xs.input - xs.propValuePtr;
-          char* newValue = NULL;
-          if (value_sz) {
-            newValue = xmalloc(xs.input - xs.propValuePtr + 1, __LINE__, __FILE__);
-            if (!newValue) {
-              free_all(&xs);
-              return tree;
-            }
-            newValue[xs.input - xs.propValuePtr] = 0;
-            strncpy(newValue, xs.propValuePtr, xs.input - xs.propValuePtr);
+      case '\"': {
+        size_t value_sz = xs.input - xs.propValuePtr;
+        char *newValue = NULL;
+        if (value_sz) {
+          newValue =
+              xmalloc(xs.input - xs.propValuePtr + 1, __LINE__, __FILE__);
+          if (!newValue) {
+            free_all(&xs);
+            return tree;
           }
-            TreeListNode *newListNode = xmalloc(sizeof(TreeListNode), __LINE__, __FILE__);
-            if (!newListNode) {
-              free(newValue);
-              free_all(&xs);
-              return tree;
-            }
-            char* newName = xmalloc(xs.propNameEnd - xs.propNamePtr + 1, __LINE__, __FILE__);
-            if (!newName) {
-              free(newValue);
-              free(newListNode);
-              free_all(&xs);
-              return tree;
-            }
-            newListNode->data.data = newValue;
-            newName[xs.propNameEnd - xs.propNamePtr] = 0;
-            strncpy(newName, xs.propNamePtr, xs.propNameEnd - xs.propNamePtr);
-            newListNode->data.children = NULL;
-            newListNode->data.nr_children = 0;
-            newListNode->data.name = newName;
-            newListNode->next = NULL;
-             if (xs.stack->childLast) {
-              xs.stack->childLast->next = newListNode;
-            } else {
-              xs.stack->childFirst = newListNode;
-            }
-            xs.stack->childLast = newListNode;
-            xs.stack->nr_chilren++;
-          
-          xs.state = XSScanTag;
-          break;
+          newValue[xs.input - xs.propValuePtr] = 0;
+          strncpy(newValue, xs.propValuePtr, xs.input - xs.propValuePtr);
         }
-        default:
-          break;
+        TreeListNode *newListNode =
+            xmalloc(sizeof(TreeListNode), __LINE__, __FILE__);
+        if (!newListNode) {
+          free(newValue);
+          free_all(&xs);
+          return tree;
         }
+        char *newName =
+            xmalloc(xs.propNameEnd - xs.propNamePtr + 1, __LINE__, __FILE__);
+        if (!newName) {
+          free(newValue);
+          free(newListNode);
+          free_all(&xs);
+          return tree;
+        }
+        newListNode->data.data = newValue;
+        newName[xs.propNameEnd - xs.propNamePtr] = 0;
+        strncpy(newName, xs.propNamePtr, xs.propNameEnd - xs.propNamePtr);
+        newListNode->data.children = NULL;
+        newListNode->data.nr_children = 0;
+        newListNode->data.name = newName;
+        newListNode->next = NULL;
+        if (xs.stack->childLast) {
+          xs.stack->childLast->next = newListNode;
+        } else {
+          xs.stack->childFirst = newListNode;
+        }
+        xs.stack->childLast = newListNode;
+        xs.stack->nr_chilren++;
+
+        xs.state = XSScanTag;
+        break;
+      }
+      default:
+        break;
+      }
       break;
     case XSExitSingleTag:
     case XSIgnore:
       switch (*xs.input) {
       case '>':
-      clear_char_list(&xs.char_list);
+        clear_char_list(&xs.char_list);
         xs.state = XSDefault;
         break;
       default:
         break;
-      }  
+      }
       break;
     default:
       break;
@@ -406,8 +407,8 @@ StringTreeNode read_from_xml(const char *xml_contents) {
 
   if (xs.stack->nr_chilren) {
     /* create an array */
-    StringTreeNode *chilrenArray =
-        xmalloc(sizeof(StringTreeNode) * xs.stack->nr_chilren, __LINE__, __FILE__);
+    StringTreeNode *chilrenArray = xmalloc(
+        sizeof(StringTreeNode) * xs.stack->nr_chilren, __LINE__, __FILE__);
 
     if (!chilrenArray) {
       free_all(&xs);

@@ -1,11 +1,11 @@
 #include "json_parser.h"
 #include "parser_utils.h"
 #include "string_tree.h"
+#include "xalloc.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "xalloc.h"
 
 struct JsonReadStates {
   enum JssState { JSSDefault, JSSReadingString, JSSReadingQuoteless } state;
@@ -51,7 +51,6 @@ int json_add_property(struct JsonReadStates *jss) {
   jss->stack->nr_chilren++;
   return 1;
 }
-
 
 StringTreeNode read_from_json(const char *json_contents) {
   StringTreeNode tree;
@@ -128,7 +127,8 @@ StringTreeNode read_from_json(const char *json_contents) {
 
         if (jss.stack->nr_chilren) {
           /* create an array */
-          chilrenArray = xmalloc(sizeof(StringTreeNode) * jss.stack->nr_chilren, __LINE__, __FILE__);
+          chilrenArray = xmalloc(sizeof(StringTreeNode) * jss.stack->nr_chilren,
+                                 __LINE__, __FILE__);
 
           if (!chilrenArray) {
             free_all_json(&jss);
@@ -144,7 +144,8 @@ StringTreeNode read_from_json(const char *json_contents) {
         }
 
         {
-          TreeListNode *newListNode = xmalloc(sizeof(TreeListNode), __LINE__, __FILE__);
+          TreeListNode *newListNode =
+              xmalloc(sizeof(TreeListNode), __LINE__, __FILE__);
           if (!newListNode) {
             free(chilrenArray);
             free_all_json(&jss);
@@ -249,8 +250,8 @@ StringTreeNode read_from_json(const char *json_contents) {
   }
 
   if (jss.stack->nr_chilren) {
-    StringTreeNode *chilrenArray =
-        xmalloc(sizeof(StringTreeNode) * jss.stack->nr_chilren, __LINE__, __FILE__);
+    StringTreeNode *chilrenArray = xmalloc(
+        sizeof(StringTreeNode) * jss.stack->nr_chilren, __LINE__, __FILE__);
 
     if (!chilrenArray) {
       free_all_json(&jss);

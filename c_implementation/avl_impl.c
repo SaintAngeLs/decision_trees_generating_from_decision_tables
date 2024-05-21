@@ -1,12 +1,12 @@
 #include "avl_impl.h"
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 static size_t avl_height(const void *tree_root, size_t loft, size_t roft,
-                  size_t hoft) {
+                         size_t hoft) {
   size_t lh, rh;
 
   if (!tree_root)
@@ -51,7 +51,8 @@ static void *avl_rotateleft(void *x, size_t loft, size_t roft, size_t hoft) {
   return y;
 }
 
-static int_fast64_t avl_BF(void *tree_root, size_t loft, size_t roft, size_t hoft) {
+static int_fast64_t avl_BF(void *tree_root, size_t loft, size_t roft,
+                           size_t hoft) {
   int_fast64_t lh, rh;
   if (!tree_root)
     return 0;
@@ -87,22 +88,21 @@ static void *avl_RL(void *tree_root, size_t loft, size_t roft, size_t hoft) {
   return tree_root;
 }
 
-static void tree_assert(void*tree_root, size_t loft,
-                 size_t roft) {
+static void tree_assert(void *tree_root, size_t loft, size_t roft) {
   assert(tree_root);
-  assert(*(void**)(tree_root+loft) != tree_root);
-  assert(*(void**)(tree_root+roft) != tree_root);
+  assert(*(void **)(tree_root + loft) != tree_root);
+  assert(*(void **)(tree_root + roft) != tree_root);
 
-  if (*(void**)(tree_root+loft))
-    tree_assert(*(void**)(tree_root+loft),  loft,  roft);
+  if (*(void **)(tree_root + loft))
+    tree_assert(*(void **)(tree_root + loft), loft, roft);
 
-  if (*(void**)(tree_root+roft))
-    tree_assert(*(void**)(tree_root+roft),  loft,  roft);
+  if (*(void **)(tree_root + roft))
+    tree_assert(*(void **)(tree_root + roft), loft, roft);
 }
 
-void *avl_insert_impl(void*tree_root, void *elem, void *allocMem, size_t node_size,
-                 int (*comp)(const void *, const void *), size_t loft,
-                 size_t roft, size_t hoft) {
+void *avl_insert_impl(void *tree_root, void *elem, void *allocMem,
+                      size_t node_size, int (*comp)(const void *, const void *),
+                      size_t loft, size_t roft, size_t hoft) {
 
   if (tree_root == NULL) {
     tree_root = allocMem;
@@ -113,7 +113,7 @@ void *avl_insert_impl(void*tree_root, void *elem, void *allocMem, size_t node_si
     /* right */
     *(void **)(tree_root + roft) =
         avl_insert_impl(*(void **)(tree_root + roft), elem, allocMem, node_size,
-                   comp, loft, roft, hoft);
+                        comp, loft, roft, hoft);
     if (avl_BF(tree_root, loft, roft, hoft) == -2) {
       if (comp(elem, *(void **)(tree_root + roft)) > 0) {
         tree_root = avl_RR(tree_root, loft, roft, hoft);
@@ -125,7 +125,7 @@ void *avl_insert_impl(void*tree_root, void *elem, void *allocMem, size_t node_si
     /* left */
     *(void **)(tree_root + loft) =
         avl_insert_impl(*(void **)(tree_root + loft), elem, allocMem, node_size,
-                   comp, loft, roft, hoft);
+                        comp, loft, roft, hoft);
     if (avl_BF(tree_root, loft, roft, hoft) == 2) {
       if (comp(elem, *(void **)(tree_root + loft)) < 0) {
         tree_root = avl_LL(tree_root, loft, roft, hoft);
@@ -142,8 +142,8 @@ void *avl_insert_impl(void*tree_root, void *elem, void *allocMem, size_t node_si
 }
 
 void *avl_erase_by_value_impl(void *tree_root, void *elem, size_t node_size,
-                       int (*comp)(const void *, const void *), size_t loft,
-                       size_t roft, size_t hoft) {
+                              int (*comp)(const void *, const void *),
+                              size_t loft, size_t roft, size_t hoft) {
   void *p;
   if (tree_root == NULL)
     return NULL;
@@ -202,33 +202,33 @@ void *avl_erase_by_value_impl(void *tree_root, void *elem, size_t node_size,
   return tree_root;
 }
 
-void* avl_find_impl(void * root, int (*comp)(const void*, const void*), void* elem, size_t left_offset, size_t right_offset) {
-    for (;;) {
+void *avl_find_impl(void *root, int (*comp)(const void *, const void *),
+                    void *elem, size_t left_offset, size_t right_offset) {
+  for (;;) {
 
-      if (!root) {
-          return NULL;
-      }
-
-      assert(elem);
-      assert(root);
-
-      if (comp(root, elem) == 0) {
-          return root;
-      }
-
-      assert(elem);
-      assert(root);
-
-      if (comp(root, elem) > 0) {
-          root = *(void**)(root + left_offset);
-      }
-      
-      /* don't compare nulls! */
-      else
-      
-      if (comp(root, elem) < 0) {
-          root = *(void**)(root + right_offset);
-      }
-
+    if (!root) {
+      return NULL;
     }
+
+    assert(elem);
+    assert(root);
+
+    if (comp(root, elem) == 0) {
+      return root;
+    }
+
+    assert(elem);
+    assert(root);
+
+    if (comp(root, elem) > 0) {
+      root = *(void **)(root + left_offset);
+    }
+
+    /* don't compare nulls! */
+    else
+
+        if (comp(root, elem) < 0) {
+      root = *(void **)(root + right_offset);
+    }
+  }
 }

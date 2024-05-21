@@ -3,9 +3,7 @@
 #include "string_tree.h"
 #include <stdio.h>
 
-
-
-void ut_read_csv_from(FILE* fp);
+void ut_read_csv_from(FILE *fp);
 
 void parse_test();
 
