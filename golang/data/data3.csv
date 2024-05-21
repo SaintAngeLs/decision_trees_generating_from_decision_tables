@@ -1,0 +1,13 @@
+name,age,gender,maritalStatus,minor,children,salary
+Robinson,25,Female,Married,false,2,220000.0
+Warner,45,Male,Married,false,0,150000.0
+Stevens,24,Male,Single,false,0,135000.0
+White,32,Female,Married,false,2,195000.0
+Smith,46,Male,Single,false,1,120000.0
+Green,28,Female,Married,false,3,140000.0
+Brown,32,Male,Married,false,2,65000.0
+Klaus,54,Male,Married,false,1,85000.0
+Houston,47,Female,Single,false,2,135000.0
+Long,29,Male,Married,false,3,40000.0
+Short,22,Male,Single,false,0,120000.0
+Doe,21,Female,Single,false,1,210000.0
