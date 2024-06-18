@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: "pip" 
+    directory: "/python" 
+    schedule:
+      interval: "weekly" 
+
+  - package-ecosystem: "conan"
+    directory: "/c_implementation" 
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/" 
+    schedule:
+      interval: "weekly"
+    allow:
+      - dependency-type: "all"
+
