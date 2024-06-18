@@ -28,4 +28,29 @@ In short, when you submit code changes, your submissions are understood to be un
 
 ## Report bugs using Github's [issues](https://github.com/SaintAngeLs/decission_trees_generating/issues)
 
-Report a bug by opening a new issue; it's that easy
+Report a bug by opening a new issue; it's that easy!
+
+**Great Bug Reports** tend to have:
+
+- A quick summary and/or background
+- Steps to reproduce
+  - Be specific!
+  - Give sample code if you can.
+- What you expected would happen
+- What actually happens
+- Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
+
+People *love* thorough bug reports.
+
+## Use a Consistent Coding Style
+
+* You can auto-format code in your preferred style.
+* Keep line lengths to 80 characters if you can.
+
+## License
+
+By contributing, you agree that your contributions will be licensed under its MIT License.
+
+## References
+
+This document was adapted from the open-source contribution guidelines for Facebook's Draft
