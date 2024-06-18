@@ -1,5 +1,3 @@
-Here's a README.md crafted for an advanced machine learning project that specifically includes mathematical formulations relevant to the generation of decision trees from decision tables:
-
 # Decision Tree Generator from Decision Tables
 
 ## Introduction
