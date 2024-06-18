@@ -21,6 +21,7 @@ class JSONDataLoader(DataLoader):
             emp['states'] = ', '.join(states)
             emp['zip_codes'] = ', '.join(zip_codes)
             emp['multi_location'] = len(emp['locations']) > 1
+            emp['children'] = emp.get('children')
             del emp['locations']
             flat_data.append(emp)
         return flat_data
@@ -45,14 +46,19 @@ def visualize_tree(node, graph, parent=None, edge_label=""):
     if node.is_leaf:
         node_label = f"Leaf: {node.decision}"
     else:
-        node_label = f"Node: {node.attribute}"
+        # Modify the label to display details about splits on 'children'
+        node_label = f"{node.attribute} = {node.threshold if node.threshold else 'No threshold'}"
+        if node.attribute == 'children':
+            node_label += f" (Children count: {node.threshold})"
+    
     node_id = str(id(node))
     graph.node(node_id, label=node_label)
     if parent:
-        graph.edge(parent, node_id, label=str(edge_label))
+        graph.edge(parent, node_id, label=edge_label)
     if not node.is_leaf:
         for value, child in node.children.items():
-            visualize_tree(child, graph, node_id, str(value))
+            visualize_tree(child, graph, node_id, f"{value}")
+
 
 def main():
     parser = argparse.ArgumentParser(description="Process and analyze data.")
